@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { label: "ראשי", href: "/" },
   { label: "דשבורדים", href: "/dashboards" },
-  { label: "קטלוג דאטה", href: "/catalog" },
+  { label: "קטלוג דאטה", href: "https://data-catalog-hub.vercel.app/" },
   { label: "אזור אישי", href: "/authorized" },
   { label: "פורטל ספקים", href: "/supplier" },
   { label: "ניהול", href: "/admin" },
