@@ -87,25 +87,27 @@ export const Header = () => {
         </button>
       </div>
 
-      {/* Mobile Menu */}
-      {mobileMenuOpen && (
-        <div className="md:hidden border-t border-border bg-background animate-slide-up">
-          <nav className="container py-4 flex flex-col gap-2">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                to={item.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className={cn(
-                  "px-4 py-3 rounded-lg text-sm font-medium transition-colors",
-                  isActive(item.href)
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-                )}
-              >
-                {item.label}
-              </Link>
-            ))}
+{/* Mobile Menu */}
+{mobileMenuOpen && (
+  <div className="md:hidden border-t border-border bg-background animate-slide-up">
+    <nav className="container py-4 flex flex-col gap-2">
+      {navItems.map((item) => (
+        <Link
+          key={item.href}
+          to={item.href}
+          target={item.href.startsWith("http") ? "_blank" : undefined}
+          rel={item.href.startsWith("http") ? "noopener noreferrer" : undefined}
+          onClick={() => setMobileMenuOpen(false)}
+          className={cn(
+            "px-4 py-3 rounded-lg text-sm font-medium transition-colors",
+            isActive(item.href)
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+          )}
+        >
+          {item.label}
+        </Link>
+      ))}
             <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-border">
               <Button variant="outline" asChild>
                 <Link to="/login" onClick={() => setMobileMenuOpen(false)}>כניסה</Link>
