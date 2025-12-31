@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>מערכת אמו"ן - המערכת המלאה</title>
+    <title>מערכת אמו"ן מוניציפלי - המערכת המלאה</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -65,13 +65,13 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // --- מנגנון יצירת אייקונים חכם (Bypassing external dependency errors) ---
+        // --- מנגנון יצירת אייקונים חכם (מונע את שגיאת Map is not a constructor) ---
         const LucideIcon = ({ name, size = 24, className = "", ...props }) => {
             const icons = window.lucide ? window.lucide.icons : null;
             const iconData = icons ? icons[name] : null;
 
             if (!iconData) {
-                // Fallback placeholder to prevent crash
+                // במקרה שאייקון לא נמצא, מציג ריבוע אפור במקום לקרוס
                 return <span style={{display:'inline-block', width:size, height:size, background:'#e2e8f0', borderRadius:'4px'}} title={name} {...props} />;
             }
 
@@ -97,27 +97,27 @@
             );
         };
 
-        // Proxy כדי לאפשר שימוש דינמי באייקונים
+        // שימוש ב-Proxy כדי לאפשר שימוש בשמות אייקונים כשמות משתנים
         const Icons = new Proxy({}, {
             get: (target, prop) => (props) => <LucideIcon name={prop} {...props} />
         });
 
-        // חילוץ האייקונים וטיפול בהתנגשויות שמות (Map, File)
+        // חילוץ האייקונים וטיפול בהתנגשויות שמות (Rename Map->MapIcon)
         const { 
           Shield, Database, Users, Truck, Lock, Menu, X, LogIn, LogOut, Search, 
           FileText, Settings, Activity, Server, Eye, EyeOff, BarChart2, PieChart, 
-          Map: MapIcon, // Renaming Map to avoid constructor conflict
+          Map: MapIcon, // שינוי שם כדי למנוע התנגשות
           ExternalLink, Filter, Maximize2, Fingerprint, ShieldCheck, FileKey,     
           History, AlertTriangle, Download, Tag, ChevronDown, ChevronUp, FileSpreadsheet, 
           CheckSquare, Upload, AlertCircle, CheckCircle, RefreshCw, FileJson, 
-          File: FileIcon, // Renaming File to avoid constructor conflict
+          File: FileIcon, // שינוי שם כדי למנוע התנגשות
           MessageSquare, Clock, UserCheck, UserX, Send, Share2, GitBranch, ArrowLeft,
           LayoutGrid, List, TrendingUp, Calendar, Bell, HelpCircle, Globe, Loader2,      
           MapPin, Table, MoreHorizontal, BadgeCheck, FileBarChart, Mail, FileCode,
           UserCog, ListFilter, Network
         } = Icons;
 
-        // --- Mock Data ---
+        // --- נתוני דמה (Mock Data) מלאים ---
         const ROLES = { GUEST: 'guest', EMPLOYEE: 'employee', SUPPLIER: 'supplier', ADMIN: 'admin' };
 
         const MOCK_DATA_CATALOG = [
@@ -164,7 +164,7 @@
           { id: 3, event: 'Data Export', user: 'Admin', resource: 'Logs', time: '10:15', status: 'warning' },
         ];
 
-        // --- Components ---
+        // --- רכיבים (Components) ---
 
         const Navbar = ({ currentUser, currentView, setView, handleLogin, handleLogout }) => {
           const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
