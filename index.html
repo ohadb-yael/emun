@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>מערכת אמו"ן מוניציפלי - גרסה יציבה</title>
+    <title>מערכת אמו"ן - תקין</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -12,7 +12,7 @@
     
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/lucide-react@0.292.0/dist/lucide-react.umd.js"></script>
 
     <style>
         body { font-family: system-ui, -apple-system, sans-serif; }
@@ -39,6 +39,8 @@
             direction: ltr;
             font-family: monospace;
             white-space: pre-wrap;
+            z-index: 9999;
+            position: relative;
         }
     </style>
 </head>
@@ -52,7 +54,7 @@
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            <h2 style="font-size: 20px;">טוען מערכת...</h2>
+            <h2 style="font-size: 20px;">טוען רכיבים...</h2>
         </div>
     </div>
 
@@ -62,34 +64,34 @@
             const root = document.getElementById('root');
             if(root) root.style.display = 'none';
             display.style.display = 'block';
-            display.innerHTML = `<strong>Critical Error:</strong>\n${message}\n\nLine: ${lineno}\n\nTip: Please check your internet connection (CDN access).`;
+            display.innerHTML = `<strong>Error:</strong>\n${message}\n\nLine: ${lineno}`;
             console.error(error);
         };
     </script>
 
     <script type="text/babel">
-        // Ensure libraries are loaded
-        if (!window.React || !window.ReactDOM || !window.lucide) {
-            throw new Error("React or Lucide libraries failed to load.");
+        // 1. Verify Libraries
+        if (!window.React || !window.ReactDOM || !window.lucideReact) {
+            throw new Error("Failed to load libraries (React or lucide-react). Check internet connection.");
         }
 
         const { useState, useEffect } = React;
-        const Icons = window.lucide.icons;
         
-        // --- DESTRUCTURING WITH ALIASES TO FIX "Map is not a constructor" ---
+        // 2. Destructure Icons from 'lucideReact' (Not lucide.icons)
+        // AND Rename colliding variables (Map, File)
         const { 
           Shield, Database, Users, Truck, Lock, Menu, X, LogIn, LogOut, Search, 
           FileText, Settings, Activity, Server, Eye, EyeOff, BarChart2, PieChart, 
-          Map: MapIcon, // Renamed to avoid conflict with JS Map
+          Map: MapIcon, // FIX 1: Rename Map to MapIcon
           ExternalLink, Filter, Maximize2, Fingerprint, ShieldCheck, FileKey,     
           History, AlertTriangle, Download, Tag, ChevronDown, ChevronUp, FileSpreadsheet, 
           CheckSquare, Upload, AlertCircle, CheckCircle, RefreshCw, FileJson, 
-          File: FileIcon, // Renamed to avoid conflict with JS File
+          File: FileIcon, // FIX 2: Rename File to FileIcon
           MessageSquare, Clock, UserCheck, UserX, Send, Share2, GitBranch, ArrowLeft,
           LayoutGrid, List, TrendingUp, Calendar, Bell, HelpCircle, Globe, Loader2,      
           MapPin, Table, MoreHorizontal, BadgeCheck, FileBarChart, Mail, FileCode,
           UserCog, ListFilter, Network
-        } = Icons;
+        } = lucideReact;
 
         // --- Mock Data ---
         const ROLES = { GUEST: 'guest', EMPLOYEE: 'employee', SUPPLIER: 'supplier', ADMIN: 'admin' };
