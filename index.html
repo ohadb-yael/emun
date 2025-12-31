@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>מערכת אמו"ן מוניציפלי</title>
+    <title>מערכת אמו"ן מוניציפלי - מתוקן</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -12,15 +12,13 @@
     
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <script src="https://unpkg.com/lucide-react@latest/dist/lucide-react.umd.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
-        /* תיקון קטן לפונט וגלילה */
         body { font-family: system-ui, -apple-system, sans-serif; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         
         @keyframes fade-in {
             from { opacity: 0; transform: translateY(10px); }
@@ -29,16 +27,51 @@
         .animate-fade-in {
             animation: fade-in 0.3s ease-out forwards;
         }
+
+        #error-display {
+            display: none;
+            padding: 20px;
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #b91c1c;
+            margin: 20px;
+            border-radius: 8px;
+            direction: ltr;
+            font-family: monospace;
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900">
-    <div id="root"></div>
+    
+    <div id="error-display"></div>
+
+    <div id="root">
+        <div style="text-align:center; padding: 50px; color: #64748b;">
+            <h2 style="font-size: 24px;">מערכת בטעינה...</h2>
+            <p>אם הטקסט הזה לא נעלם תוך 5 שניות, כנראה יש חסימת רשת או שגיאת סקריפט.</p>
+        </div>
+    </div>
+
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            const display = document.getElementById('error-display');
+            display.style.display = 'block';
+            display.innerHTML = `<strong>Error Detected:</strong><br/>${message}<br/><br/>Line: ${lineno}`;
+            console.error(error);
+        };
+    </script>
 
     <script type="text/babel">
-        // --- הגדרות ראשוניות להפעלת ריאקט בדפדפן ---
+        // --- בדיקת טעינת ספריות ---
+        if (!window.React || !window.ReactDOM || !window.lucide) {
+            throw new Error("One or more libraries (React, ReactDOM, Lucide) failed to load from CDN.");
+        }
+
         const { useState, useEffect } = React;
         
-        // שליפת האייקונים מהספרייה הגלובלית
+        // --- תיקון קריטי: שליפת האייקונים בצורה בטוחה ---
+        // אנו משתמשים ב-window.lucide במקום destructing ישיר כדי למנוע קריסה
+        const Icons = window.lucide.icons; 
         const { 
           Shield, Database, Users, Truck, Lock, Menu, X, LogIn, LogOut, Search, 
           FileText, Settings, Activity, Server, Eye, EyeOff, BarChart2, PieChart, 
@@ -49,217 +82,43 @@
           LayoutGrid, List, TrendingUp, Calendar, Bell, HelpCircle, Globe, Loader2,      
           MapPin, Table, MoreHorizontal, BadgeCheck, FileBarChart, Mail, FileCode,
           UserCog, ListFilter, Network
-        } = lucideReact;
+        } = Icons; // שימוש בגרסה המעודכנת של הספרייה
 
-        // --- Mock Data & Constants ---
-
-        const ROLES = {
-          GUEST: 'guest',
-          EMPLOYEE: 'employee',
-          SUPPLIER: 'supplier',
-          ADMIN: 'admin'
-        };
+        // --- Mock Data ---
+        const ROLES = { GUEST: 'guest', EMPLOYEE: 'employee', SUPPLIER: 'supplier', ADMIN: 'admin' };
 
         const MOCK_DATA_CATALOG = [
-          { 
-            id: 1, 
-            name: 'נתוני מכירות Q3', 
-            type: 'Excel', 
-            classification: 'סודי ביותר', 
-            owner: 'מחלקת כספים',
-            department: 'finance',
-            tags: ['כספים', '2024', 'דוח רבעוני'],
-            size: '4.2 MB',
-            qualityScore: 98,
-            lastUpdate: '10/05/2024',
-            rowCount: '14,500',
-            description: 'פירוט עסקאות רבעוני כולל מע"מ וזיכויים.'
-          },
-          { 
-            id: 2, 
-            name: 'רשימת עובדים פעילים', 
-            type: 'SQL View', 
-            classification: 'פנימי', 
-            owner: 'משאבי אנוש',
-            department: 'hr',
-            tags: ['HR', 'עובדים', 'שכר'],
-            size: 'Query',
-            qualityScore: 100,
-            lastUpdate: 'היום',
-            rowCount: '1,240',
-            description: 'מבט על עובדים פעילים, מחלקות ותאריכי גיוס.'
-          },
-          { 
-            id: 3, 
-            name: 'קטלוג מוצרים ציבורי', 
-            type: 'JSON API', 
-            classification: 'ציבורי', 
-            owner: 'שיווק',
-            department: 'marketing',
-            tags: ['API', 'מוצרים', 'e-commerce'],
-            size: 'Live Stream',
-            qualityScore: 92,
-            lastUpdate: 'אוטומטי',
-            rowCount: 'N/A',
-            description: 'ממשק פתוח לשימוש באתר האיקומרס והאפליקציה.'
-          },
-          { 
-            id: 4, 
-            name: 'לוגים של שרתים', 
-            type: 'Elastic', 
-            classification: 'סודי', 
-            owner: 'IT',
-            department: 'it',
-            tags: ['Logs', 'Security', 'Infrastructure'],
-            size: '250 GB',
-            qualityScore: 85,
-            lastUpdate: 'בזמן אמת',
-            rowCount: '~50M',
-            description: 'לוגי תעבורה, שגיאות ואבטחה מכלל שרתי הארגון.'
-          },
-        ];
-
-        const MOCK_SUPPLIER_ORDERS = [
-          { id: 'ORD-2024-001', date: '2024-05-01', status: 'אושר', amount: '₪45,000' },
-          { id: 'ORD-2024-002', date: '2024-05-03', status: 'בטיפול', amount: '₪12,500' },
-          { id: 'ORD-2024-005', date: '2024-05-10', status: 'נשלח', amount: '₪3,200' },
-        ];
-
-        const MOCK_USERS = [
-          { id: 1, name: 'ישראל ישראלי', role: 'employee', status: 'active', department: 'finance', lastLogin: 'היום, 09:41' },
-          { id: 2, name: 'חברת אספקה בע"מ', role: 'supplier', status: 'active', department: 'external', lastLogin: 'אתמול, 14:20' },
-          { id: 3, name: 'מנהל מערכת', role: 'admin', status: 'active', department: 'it', lastLogin: 'עכשיו' },
-          { id: 4, name: 'שרה לוי', role: 'employee', status: 'suspended', department: 'hr', lastLogin: 'לפני שבוע' },
+          { id: 1, name: 'נתוני מכירות Q3', type: 'Excel', classification: 'סודי ביותר', owner: 'מחלקת כספים', department: 'finance', tags: ['כספים', '2024'], size: '4.2 MB', qualityScore: 98, lastUpdate: '10/05/2024', rowCount: '14,500', description: 'פירוט עסקאות רבעוני כולל מע"מ וזיכויים.' },
+          { id: 2, name: 'רשימת עובדים פעילים', type: 'SQL View', classification: 'פנימי', owner: 'משאבי אנוש', department: 'hr', tags: ['HR', 'עובדים'], size: 'Query', qualityScore: 100, lastUpdate: 'היום', rowCount: '1,240', description: 'מבט על עובדים פעילים.' },
+          { id: 3, name: 'לוגים של שרתים', type: 'Elastic', classification: 'סודי', owner: 'IT', department: 'it', tags: ['Logs', 'Security'], size: '250 GB', qualityScore: 85, lastUpdate: 'בזמן אמת', rowCount: '~50M', description: 'לוגי תעבורה ושגיאות.' },
         ];
 
         const MOCK_PUBLIC_DASHBOARDS = [
-          { 
-            id: 1, 
-            title: 'מדדי ביצוע מרכזיים (KPIs) - 2024', 
-            description: 'סקירה שנתית של ביצועי החברה, יעדי צמיחה ומדדים פיננסיים.',
-            system: 'PowerBI', 
-            category: 'פיננסי',
-            views: 12500,
-            viewsDisplay: '12.5K',
-            updated: '12/05/2024',
-            icon: BarChart2,
-            color: 'bg-yellow-500',
-            type: 'charts'
-          },
-          { 
-            id: 2, 
-            title: 'מפת פריסה ארצית - תשתיות', 
-            description: 'מפה אינטראקטיבית המציגה את פריסת הסיבים והאנטנות ברחבי הארץ.',
-            system: 'Tableau', 
-            category: 'תפעול',
-            views: 8200,
-            viewsDisplay: '8.2K',
-            updated: '10/05/2024',
-            icon: Map,
-            color: 'bg-blue-500',
-            type: 'map'
-          },
-          { 
-            id: 3, 
-            title: 'דוח שביעות רצון לקוחות', 
-            description: 'ניתוח סקרי שביעות רצון, זמני המתנה במוקד ופניות פתוחות.',
-            system: 'Looker', 
-            category: 'שירות',
-            views: 5600,
-            viewsDisplay: '5.6K',
-            updated: '09/05/2024',
-            icon: PieChart,
-            color: 'bg-purple-500',
-            type: 'charts'
-          },
-          { 
-            id: 4, 
-            title: 'צריכת אנרגיה ומדדי קיימות', 
-            description: 'דשבורד בזמן אמת המציג את צריכת החשמל והחיסכון באנרגיה במשרדים.',
-            system: 'Custom', 
-            category: 'קיימות',
-            views: 2100,
-            viewsDisplay: '2.1K',
-            updated: 'היום',
-            icon: Activity,
-            color: 'bg-green-500',
-            type: 'table'
-          },
+          { id: 1, title: 'מדדי ביצוע (KPIs) 2024', description: 'סקירה שנתית של ביצועי החברה.', system: 'PowerBI', category: 'פיננסי', views: 12500, viewsDisplay: '12.5K', updated: '12/05/2024', icon: BarChart2, color: 'bg-yellow-500', type: 'charts' },
+          { id: 2, title: 'מפת תשתיות ארצית', description: 'מפה אינטראקטיבית של פריסת סיבים.', system: 'Tableau', category: 'תפעול', views: 8200, viewsDisplay: '8.2K', updated: '10/05/2024', icon: Map, color: 'bg-blue-500', type: 'map' },
+          { id: 3, title: 'שביעות רצון לקוחות', description: 'ניתוח סקרי שירות ומוקד.', system: 'Looker', category: 'שירות', views: 5600, viewsDisplay: '5.6K', updated: '09/05/2024', icon: PieChart, color: 'bg-purple-500', type: 'charts' },
         ];
 
-        const MOCK_SECURE_DASHBOARDS = [
-          { 
-            id: 101, 
-            title: 'ניהול תקציב ומשכורות', 
-            sensitivity: 'HIGH', 
-            requiredGroup: 'finance', 
-            system: 'SAP Analytics',
-            lastAccess: 'לפני יומיים'
-          },
-          { 
-            id: 102, 
-            title: 'תיקים אישיים (HR Sensitive)', 
-            sensitivity: 'HIGH', 
-            requiredGroup: 'hr', 
-            system: 'Workday',
-            lastAccess: 'מעולם לא'
-          },
-          { 
-            id: 103, 
-            title: 'מלאי מחסנים ראשי', 
-            sensitivity: 'MEDIUM', 
-            requiredGroup: 'logistics', 
-            system: 'PowerBI',
-            lastAccess: '-'
-          },
-          { 
-            id: 104, 
-            title: 'ביצועי שרתים (Admin)', 
-            sensitivity: 'MEDIUM', 
-            requiredGroup: 'it', 
-            system: 'Grafana',
-            lastAccess: 'היום, 08:00'
-          }
-        ];
-
-        const MOCK_ACCESS_REQUESTS = [
-          { id: 1, userId: 1, userName: 'ישראל ישראלי', resource: 'מלאי מחסנים ראשי', reason: 'נדרש לצורך ספירת מלאי רבעונית', status: 'pending', date: '2024-05-18', log: [] },
-          { id: 2, userId: 1, userName: 'ישראל ישראלי', resource: 'דוח שכר בכירים', reason: 'ביקורת פנימית', status: 'rejected', date: '2024-05-15', log: ['נדחה ע"י Admin: אין הרשאה מתאימה'] },
-          { id: 3, userId: 2, userName: 'חברת אספקה בע"מ', resource: 'קטלוג מחירים סיטונאי', reason: 'עדכון מחירון', status: 'approved', date: '2024-05-10', log: ['אושר ע"י Admin'] },
-        ];
-
-        const MOCK_SYSTEM_LOGS = [
-          { id: 1, event: 'Login Success', user: 'ישראל ישראלי', ip: '10.0.0.5', time: '10:42', status: 'success' },
-          { id: 2, event: 'Failed Login', user: 'Unknown', ip: '192.168.1.1', time: '10:40', status: 'error' },
-          { id: 3, event: 'Data Export', user: 'מנהל מערכת', resource: 'Logs', time: '10:15', status: 'warning' },
-          { id: 4, event: 'Access Granted', user: 'Admin', resource: 'User Mgmt', time: '09:00', status: 'success' },
+        const MOCK_USERS = [
+           { id: 1, name: 'ישראל ישראלי', role: 'employee', status: 'active', department: 'finance', lastLogin: 'היום, 09:41' },
+           { id: 2, name: 'חברת אספקה בע"מ', role: 'supplier', status: 'active', department: 'external', lastLogin: 'אתמול, 14:20' },
+           { id: 3, name: 'מנהל מערכת', role: 'admin', status: 'active', department: 'it', lastLogin: 'עכשיו' }
         ];
 
         // --- Components ---
 
-        // 1. Navigation Bar
         const Navbar = ({ currentUser, currentView, setView, handleLogin, handleLogout }) => {
           const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
           const [showNotifications, setShowNotifications] = useState(false);
 
           const NavItem = ({ view, label, icon: Icon, allowedRoles }) => {
-            if (allowedRoles && (!currentUser || !allowedRoles.includes(currentUser.role))) {
-              return null;
-            }
-            
+            if (allowedRoles && (!currentUser || !allowedRoles.includes(currentUser.role))) return null;
             return (
               <button
-                onClick={() => {
-                  setView(view);
-                  setIsMobileMenuOpen(false);
-                }}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors duration-200 w-full md:w-auto text-right md:text-center
-                  ${currentView === view 
-                    ? 'bg-blue-600 text-white shadow-md' 
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-blue-600'}`}
+                onClick={() => { setView(view); setIsMobileMenuOpen(false); }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors duration-200 w-full md:w-auto text-right md:text-center ${currentView === view ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100 hover:text-blue-600'}`}
               >
-                <Icon size={18} />
-                <span className="font-medium">{label}</span>
+                <Icon size={18} /> <span className="font-medium">{label}</span>
               </button>
             );
           };
@@ -268,1966 +127,128 @@
             <nav className="bg-white shadow-lg sticky top-0 z-50 border-b border-slate-200">
               <div className="max-w-7xl mx-auto px-4">
                 <div className="flex justify-between h-16">
-                  {/* Logo & Brand */}
                   <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('public')}>
-                    <div className="bg-blue-600 p-2 rounded-lg">
-                      <Shield className="text-white" size={24} />
-                    </div>
-                    <span className="text-xl font-bold text-blue-600 hidden sm:block">מערכת אמו"ן מוניציפלי</span>
+                    <div className="bg-blue-600 p-2 rounded-lg"><Shield className="text-white" size={24} /></div>
+                    <span className="text-xl font-bold text-blue-600 hidden sm:block">מערכת אמו"ן</span>
                   </div>
-
                   <div className="hidden md:flex items-center space-x-1 space-x-reverse">
                     <NavItem view="public" label="בית" icon={Server} />
                     <NavItem view="public-dashboards" label="דשבורדים" icon={BarChart2} />
-                    <NavItem view="authorized" label="אזור אישי" icon={Activity} allowedRoles={[ROLES.EMPLOYEE, ROLES.ADMIN]} />
                     <NavItem view="catalog" label="קטלוג דאטה" icon={Database} allowedRoles={[ROLES.EMPLOYEE, ROLES.ADMIN]} />
-                    <NavItem view="supplier" label="פורטל ספקים" icon={Truck} allowedRoles={[ROLES.SUPPLIER, ROLES.ADMIN]} />
                     <NavItem view="admin" label="ניהול" icon={Lock} allowedRoles={[ROLES.ADMIN]} />
-                    <NavItem view="workflow" label="תרשים מערכת" icon={GitBranch} allowedRoles={[ROLES.ADMIN, ROLES.EMPLOYEE, ROLES.GUEST]} />
                   </div>
-
-                  <div className="flex items-center gap-2 md:gap-4">
-                    {/* General Accessories */}
-                    <div className="flex items-center gap-1 md:gap-2">
-                      <button className="p-2 text-slate-500 hover:text-blue-600 hover:bg-slate-50 rounded-full transition hidden sm:block" title="עזרה ותמיכה">
-                        <HelpCircle size={20} />
-                      </button>
-                      <button className="p-2 text-slate-500 hover:text-blue-600 hover:bg-slate-50 rounded-full transition hidden sm:block" title="שפה">
-                        <Globe size={20} />
-                      </button>
-                      {currentUser && (
-                        <div className="relative">
-                          <button 
-                            onClick={() => setShowNotifications(!showNotifications)}
-                            className="p-2 text-slate-500 hover:text-blue-600 hover:bg-slate-50 rounded-full transition relative"
-                          >
-                            <Bell size={20} />
-                            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-                          </button>
-                          {showNotifications && (
-                            <div className="absolute top-12 left-0 w-72 bg-white rounded-xl shadow-2xl border border-slate-100 p-4 z-[100] text-right animate-fade-in">
-                              <div className="flex justify-between items-center mb-3 border-b border-slate-100 pb-2">
-                                <span className="font-bold text-sm text-slate-700">התראות</span>
-                                <span className="text-xs text-blue-600 cursor-pointer">סמן כנקרא</span>
-                              </div>
-                              <div className="space-y-2">
-                                <div className="text-sm text-slate-600 bg-blue-50 p-2 rounded border-r-2 border-blue-500">
-                                  <span className="font-bold block text-xs mb-1">אבטחת מידע</span>
-                                  סיסמתך תפוג בעוד 45 יום.
-                                </div>
-                                <div className="text-sm text-slate-600 hover:bg-slate-50 p-2 rounded transition cursor-pointer">
-                                  <span className="font-bold block text-xs mb-1">מערכת</span>
-                                  נוספו 3 דשבורדים חדשים לקטלוג.
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="h-6 w-px bg-slate-200 hidden md:block"></div>
-
+                  <div className="flex items-center gap-4">
                     {currentUser ? (
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm font-medium text-slate-600 hidden md:block">
-                          שלום, {currentUser.name}
-                        </span>
-                        <button 
-                          onClick={handleLogout}
-                          className="flex items-center gap-1 text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-md text-sm transition"
-                        >
-                          <LogOut size={16} />
-                          <span className="hidden md:inline">התנתק</span>
-                        </button>
-                      </div>
+                      <button onClick={handleLogout} className="text-red-500 text-sm font-medium">התנתק</button>
                     ) : (
-                      <button 
-                        onClick={() => setView('login')}
-                        className="flex items-center gap-1 bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-700 transition"
-                      >
-                        <LogIn size={16} />
-                        <span>התחברות</span>
-                      </button>
+                      <button onClick={() => setView('login')} className="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm">התחברות</button>
                     )}
-
-                    <button 
-                      className="md:hidden p-2 text-slate-600"
-                      onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                    >
-                      {isMobileMenuOpen ? <X /> : <Menu />}
-                    </button>
                   </div>
                 </div>
               </div>
-
-              {isMobileMenuOpen && (
-                <div className="md:hidden bg-white border-t border-slate-100 p-4 space-y-2 shadow-xl absolute w-full z-50">
-                  <NavItem view="public" label="בית" icon={Server} />
-                  <NavItem view="public-dashboards" label="דשבורדים ציבוריים" icon={BarChart2} />
-                  <NavItem view="authorized" label="אזור אישי" icon={Activity} allowedRoles={[ROLES.EMPLOYEE, ROLES.ADMIN]} />
-                  <NavItem view="catalog" label="קטלוג דאטה" icon={Database} allowedRoles={[ROLES.EMPLOYEE, ROLES.ADMIN]} />
-                  <NavItem view="supplier" label="פורטל ספקים" icon={Truck} allowedRoles={[ROLES.SUPPLIER, ROLES.ADMIN]} />
-                  <NavItem view="admin" label="ניהול הרשאות" icon={Lock} allowedRoles={[ROLES.ADMIN]} />
-                  <NavItem view="workflow" label="תרשים מערכת" icon={GitBranch} allowedRoles={[ROLES.ADMIN, ROLES.EMPLOYEE, ROLES.GUEST]} />
-                </div>
-              )}
             </nav>
           );
         };
 
-        // 2. Public Site Module
         const PublicSite = () => (
-          <div className="animate-fade-in">
-            <div className="bg-gradient-to-br from-slate-900 to-blue-900 text-white py-20 px-4 text-center rounded-b-[3rem] shadow-2xl mb-12">
-              <h1 className="text-4xl md:text-6xl font-bold mb-6">תשתית ארגונית אחודה</h1>
-              <p className="text-xl text-blue-100 max-w-2xl mx-auto mb-8">
-                פלטפורמה מרכזית המאגדת את כלל השירותים הדיגיטליים של הארגון תחת קורת גג אחת, מאובטחת ונגישה.
-              </p>
-              <div className="flex justify-center gap-4 flex-wrap">
-                <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/20">
-                  <Shield className="mx-auto mb-2 text-blue-300" />
-                  <span className="font-semibold">אבטחה מתקדמת</span>
-                </div>
-                <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/20">
-                  <Activity className="mx-auto mb-2 text-green-300" />
-                  <span className="font-semibold">זמינות גבוהה</span>
-                </div>
-                <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/20">
-                  <Users className="mx-auto mb-2 text-purple-300" />
-                  <span className="font-semibold">חווית משתמש</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="max-w-7xl mx-auto px-4 grid md:grid-cols-3 gap-8 mb-16">
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition">
-                <h3 className="text-xl font-bold mb-3 text-slate-800">אודות החברה</h3>
-                <p className="text-slate-600">אנחנו מובילים את תחום התשתיות הדיגיטליות בישראל משנת 2005, עם דגש על חדשנות וקיימות.</p>
-              </div>
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition">
-                <h3 className="text-xl font-bold mb-3 text-slate-800">חדשות ועדכונים</h3>
-                <p className="text-slate-600">הושק מודול הספקים החדש המאפשר שקיפות מלאה בתהליכי הרכש והאספקה.</p>
-              </div>
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition">
-                <h3 className="text-xl font-bold mb-3 text-slate-800">צור קשר</h3>
-                <p className="text-slate-600">מוקד התמיכה שלנו זמין עבורכם 24/7 לכל שאלה בנושא המערכות הדיגיטליות.</p>
-              </div>
+          <div className="animate-fade-in p-8 text-center">
+            <h1 className="text-4xl font-bold text-slate-800 mb-4">תשתית ארגונית אחודה</h1>
+            <p className="text-xl text-slate-600 max-w-2xl mx-auto mb-8">פלטפורמה מרכזית המאגדת את כלל השירותים הדיגיטליים של הארגון.</p>
+            <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+                <div className="bg-white p-6 rounded-xl shadow border border-slate-100"><Shield className="mx-auto mb-2 text-blue-500"/><h3 className="font-bold">אבטחה</h3></div>
+                <div className="bg-white p-6 rounded-xl shadow border border-slate-100"><Activity className="mx-auto mb-2 text-green-500"/><h3 className="font-bold">זמינות</h3></div>
+                <div className="bg-white p-6 rounded-xl shadow border border-slate-100"><Users className="mx-auto mb-2 text-purple-500"/><h3 className="font-bold">שירות</h3></div>
             </div>
           </div>
         );
 
-        // 2.5 Public Dashboards Module
         const PublicDashboards = () => {
-          const [selectedDashboard, setSelectedDashboard] = useState(null);
-          const [filter, setFilter] = useState('all');
-          const [searchTerm, setSearchTerm] = useState('');
-          const [viewMode, setViewMode] = useState('grid');
-          const [sortBy, setSortBy] = useState('default');
-
-          const categories = ['all', ...new Set(MOCK_PUBLIC_DASHBOARDS.map(d => d.category))];
-
-          const filteredDashboards = MOCK_PUBLIC_DASHBOARDS.filter(d => {
-            const matchesFilter = filter === 'all' || d.category === filter;
-            const matchesSearch = d.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                                  d.system.toLowerCase().includes(searchTerm.toLowerCase());
-            return matchesFilter && matchesSearch;
-          }).sort((a, b) => {
-            if (sortBy === 'views') {
-              return b.views - a.views;
-            }
-            return 0;
-          });
-
-          const DashboardViewer = ({ data, onClose }) => {
-            const [isLoading, setIsLoading] = useState(true);
-
-            useEffect(() => {
-              const timer = setTimeout(() => setIsLoading(false), 1500);
-              return () => clearTimeout(timer);
-            }, []);
-
-            const renderVisualization = () => {
-              if (data.type === 'map') {
-                return (
-                  <div className="bg-slate-100 rounded-xl h-full min-h-[500px] flex items-center justify-center relative overflow-hidden border border-slate-200">
-                    <div className="absolute inset-0 bg-slate-200 opacity-30" style={{ backgroundImage: 'radial-gradient(#94a3b8 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
-                    <div className="absolute top-1/4 left-1/4 text-red-500 animate-bounce"><MapPin size={32} /></div>
-                    <div className="absolute top-1/2 left-1/2 text-blue-500 animate-bounce delay-100"><MapPin size={32} /></div>
-                    <div className="absolute bottom-1/3 right-1/4 text-green-500 animate-bounce delay-200"><MapPin size={32} /></div>
-                    <div className="z-10 text-center">
-                      <Map size={64} className="mx-auto text-slate-400 mb-4" />
-                      <h3 className="text-xl font-bold text-slate-600">מפה אינטראקטיבית</h3>
-                      <p className="text-slate-500">מציג נתוני מיקום בזמן אמת מתוך {data.system}</p>
-                    </div>
-                  </div>
-                );
-              } else if (data.type === 'table') {
-                return (
-                  <div className="bg-white rounded-xl border border-slate-200 h-full min-h-[500px] p-6 overflow-auto">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="font-bold text-slate-700 flex items-center gap-2"><Table size={18}/> נתונים טבלאיים</h4>
-                      <button className="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded text-sm">ייצוא לאקסל</button>
-                    </div>
-                    <table className="w-full text-right text-sm">
-                      <thead className="bg-slate-50 text-slate-600">
-                        <tr>
-                          <th className="p-3">חודש</th>
-                          <th className="p-3">צריכה (קוט"ש)</th>
-                          <th className="p-3">חיסכון</th>
-                          <th className="p-3">סטטוס</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {[...Array(10)].map((_, i) => (
-                          <tr key={i} className="hover:bg-slate-50">
-                            <td className="p-3">ינואר {2024}</td>
-                            <td className="p-3 font-mono">{Math.floor(Math.random() * 5000) + 1000}</td>
-                            <td className="p-3 text-green-600">{Math.floor(Math.random() * 20)}%</td>
-                            <td className="p-3"><span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs">תקין</span></td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                );
-              } else {
-                return (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-full min-h-[500px]">
-                    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col col-span-2">
-                      <div className="flex justify-between items-center mb-4">
-                        <h4 className="font-bold text-slate-700">מגמות לאורך זמן</h4>
-                        <button className="text-slate-400 hover:text-slate-600"><MoreHorizontal size={16}/></button>
-                      </div>
-                      <div className="flex-grow flex items-end justify-between gap-2 px-2 pb-2">
-                        {[40, 65, 45, 80, 55, 90, 70, 85, 60, 75, 50, 95].map((h, i) => (
-                          <div key={i} className="w-full bg-blue-100 hover:bg-blue-500 transition-colors rounded-t-sm relative group" style={{ height: `${h}%` }}>
-                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap z-10 pointer-events-none">
-                              {h * 100} יחידות
+             return (
+                 <div className="max-w-7xl mx-auto px-4 py-8 animate-fade-in">
+                    <h2 className="text-2xl font-bold mb-6 flex items-center gap-2"><BarChart2 className="text-blue-600"/> דשבורדים ציבוריים</h2>
+                    <div className="grid md:grid-cols-3 gap-6">
+                        {MOCK_PUBLIC_DASHBOARDS.map(d => (
+                            <div key={d.id} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition">
+                                <div className="flex items-center gap-3 mb-3">
+                                    <div className={`p-2 rounded-lg ${d.color} text-white`}><d.icon size={20}/></div>
+                                    <h3 className="font-bold text-slate-800">{d.title}</h3>
+                                </div>
+                                <p className="text-slate-500 text-sm mb-4">{d.description}</p>
+                                <div className="text-xs text-slate-400 flex gap-4">
+                                    <span className="flex items-center gap-1"><Eye size={12}/> {d.viewsDisplay}</span>
+                                    <span className="flex items-center gap-1"><Server size={12}/> {d.system}</span>
+                                </div>
                             </div>
-                          </div>
                         ))}
-                      </div>
-                      <div className="border-t mt-2 pt-2 flex justify-between text-xs text-slate-400">
-                        <span>ינואר</span><span>יוני</span><span>דצמבר</span>
-                      </div>
                     </div>
+                 </div>
+             )
+        }
 
-                    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col">
-                      <h4 className="font-bold text-slate-700 mb-4">התפלגות</h4>
-                      <div className="flex-grow flex items-center justify-center relative">
-                        <div className="w-40 h-40 rounded-full border-[16px] border-orange-400 border-r-blue-500 border-b-green-400 transform rotate-45 hover:scale-105 transition-transform"></div>
-                        <div className="absolute text-center pointer-events-none">
-                          <div className="text-2xl font-bold">100%</div>
-                          <div className="text-xs text-slate-500">סה"כ</div>
-                        </div>
-                      </div>
-                      <div className="mt-4 space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-blue-500"></div> סוג א'</span>
-                          <span className="font-bold">45%</span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-orange-400"></div> סוג ב'</span>
-                          <span className="font-bold">30%</span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-green-400"></div> סוג ג'</span>
-                          <span className="font-bold">25%</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 md:col-span-3 flex flex-col">
-                      <h4 className="font-bold text-slate-700 mb-4">סיכום נתונים</h4>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-right text-sm">
-                          <thead className="bg-slate-50 text-slate-600">
-                            <tr>
-                              <th className="p-2">מדד</th>
-                              <th className="p-2">יעד שנתי</th>
-                              <th className="p-2">ביצוע בפועל</th>
-                              <th className="p-2">סטטוס</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {[1,2,3].map(i => (
-                              <tr key={i} className="border-b hover:bg-slate-50 transition">
-                                <td className="p-2 font-medium">מדד ביצועים {i}</td>
-                                <td className="p-2">1,000</td>
-                                <td className="p-2 font-bold">9{i}0</td>
-                                <td className="p-2"><span className="text-green-600 bg-green-50 px-2 py-0.5 rounded text-xs border border-green-100">עומד ביעד</span></td>
-                              </tr>
+        const DataCatalog = ({ currentUser }) => (
+            <div className="max-w-7xl mx-auto px-4 py-8 animate-fade-in">
+                <h2 className="text-2xl font-bold mb-6 flex items-center gap-2"><Database className="text-blue-600"/> קטלוג דאטה</h2>
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table className="w-full text-right">
+                        <thead className="bg-slate-50 border-b border-slate-200 text-sm text-slate-600">
+                            <tr><th className="p-4">שם המאגר</th><th className="p-4">סיווג</th><th className="p-4">מחלקה</th><th className="p-4">פעולות</th></tr>
+                        </thead>
+                        <tbody>
+                            {MOCK_DATA_CATALOG.map(item => (
+                                <tr key={item.id} className="border-b border-slate-100 hover:bg-slate-50">
+                                    <td className="p-4 font-bold text-slate-700">{item.name}</td>
+                                    <td className="p-4"><span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">{item.classification}</span></td>
+                                    <td className="p-4 text-slate-600">{item.department}</td>
+                                    <td className="p-4"><button className="text-blue-600 text-sm hover:underline">פרטים</button></td>
+                                </tr>
                             ))}
-                          </tbody>
-                        </table>
-                      </div>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        );
+
+        const LoginScreen = ({ onLogin }) => (
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <div className="bg-white p-8 rounded-2xl shadow-xl border border-slate-100 max-w-md w-full text-center">
+                    <h2 className="text-2xl font-bold mb-6">התחברות להדגמה</h2>
+                    <div className="space-y-3">
+                        <button onClick={() => onLogin(MOCK_USERS[0])} className="w-full p-3 border rounded-lg hover:bg-blue-50 text-right">עובד (כספים)</button>
+                        <button onClick={() => onLogin(MOCK_USERS[1])} className="w-full p-3 border rounded-lg hover:bg-blue-50 text-right">ספק חיצוני</button>
+                        <button onClick={() => onLogin(MOCK_USERS[2])} className="w-full p-3 border rounded-lg hover:bg-blue-50 text-right font-bold">מנהל מערכת (Admin)</button>
                     </div>
-                  </div>
-                );
-              }
+                </div>
+            </div>
+        );
+
+        const App = () => {
+            const [currentUser, setCurrentUser] = useState(null);
+            const [currentView, setCurrentView] = useState('public');
+
+            const renderContent = () => {
+                switch(currentView) {
+                    case 'public': return <PublicSite />;
+                    case 'public-dashboards': return <PublicDashboards />;
+                    case 'catalog': return <DataCatalog currentUser={currentUser} />;
+                    case 'login': return <LoginScreen onLogin={(u) => { setCurrentUser(u); setCurrentView('public'); }} />;
+                    case 'admin': return <div className="p-8 text-center text-xl">אזור ניהול (Admin)</div>;
+                    default: return <PublicSite />;
+                }
             };
 
             return (
-              <div className="fixed inset-0 bg-slate-900/80 z-[60] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
-                <div className="bg-white w-full max-w-6xl h-[90vh] rounded-2xl flex flex-col shadow-2xl overflow-hidden">
-                  <div className="bg-slate-50 border-b p-4 flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg ${data.color} text-white shadow-sm`}>
-                        <data.icon size={20} />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-lg text-slate-800">{data.title}</h3>
-                        <div className="flex items-center gap-2 text-xs text-slate-500">
-                          <span className="flex items-center gap-1"><Server size={10}/> {data.system}</span>
-                          <span>•</span>
-                          <span>עודכן: {data.updated}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button className="p-2 hover:bg-slate-200 rounded-lg text-slate-600 hidden md:flex items-center gap-1 transition">
-                        <ExternalLink size={18} />
-                        <span className="text-sm">פתח בחלון חדש</span>
-                      </button>
-                      <button onClick={onClose} className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg transition">
-                        <X size={24} />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex-grow bg-slate-100 p-6 overflow-y-auto relative">
-                    {isLoading ? (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/50 backdrop-blur-sm z-10">
-                        <Loader2 size={48} className="text-blue-600 animate-spin mb-4" />
-                        <p className="text-slate-600 font-medium">טוען נתונים מ-{data.system}...</p>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="bg-white p-3 rounded-lg shadow-sm mb-6 flex flex-wrap gap-4 items-center border border-slate-200">
-                          <span className="text-sm font-bold text-slate-600 flex items-center gap-1">
-                            <Filter size={14} /> סינון דוח:
-                          </span>
-                          <select className="bg-slate-50 border rounded px-2 py-1 text-sm outline-none focus:border-blue-500"><option>הכל</option><option>2024</option><option>2023</option></select>
-                          <select className="bg-slate-50 border rounded px-2 py-1 text-sm outline-none focus:border-blue-500"><option>כל הסניפים</option><option>מרכז</option><option>צפון</option></select>
-                          <div className="flex-grow"></div>
-                          <button className="text-blue-600 text-sm hover:underline">נקה סינון</button>
-                        </div>
-                        {renderVisualization()}
-                      </>
-                    )}
-                  </div>
+                <div dir="rtl" className="min-h-screen bg-slate-50 font-sans text-slate-900 flex flex-col">
+                    <Navbar 
+                        currentUser={currentUser} 
+                        currentView={currentView} 
+                        setView={setCurrentView} 
+                        handleLogin={() => setCurrentView('login')}
+                        handleLogout={() => setCurrentUser(null)}
+                    />
+                    <main className="flex-grow">{renderContent()}</main>
+                    <footer className="bg-slate-900 text-slate-400 py-6 text-center text-sm">© 2024 מערכת אמו"ן מוניציפלי</footer>
                 </div>
-              </div>
             );
-          };
-
-          return (
-            <div className="max-w-7xl mx-auto px-4 py-8 animate-fade-in">
-              <header className="mb-10 text-center md:text-right">
-                <h2 className="text-3xl font-bold text-slate-800 flex items-center justify-center md:justify-start gap-3">
-                  <BarChart2 className="text-blue-600" size={32} />
-                  דשבורדים ודוחות ציבוריים
-                </h2>
-                <p className="text-slate-500 mt-2 max-w-2xl">
-                  מאגר הדוחות הפתוחים של הארגון. מאפשר גישה מהירה לנתוני ביצועים, שקיפות ומידע לציבור ללא צורך בהזדהות.
-                </p>
-              </header>
-
-              <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-8 bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-                <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0">
-                  <button 
-                    onClick={() => setViewMode('grid')}
-                    className={`p-2 rounded-lg transition ${viewMode === 'grid' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
-                    title="תצוגת רשת"
-                  >
-                    <LayoutGrid size={20} />
-                  </button>
-                  <button 
-                    onClick={() => setViewMode('list')}
-                    className={`p-2 rounded-lg transition ${viewMode === 'list' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
-                    title="תצוגת רשימה"
-                  >
-                    <List size={20} />
-                  </button>
-                  <div className="h-6 w-px bg-slate-200 mx-2"></div>
-                  {categories.map(cat => (
-                    <button
-                      key={cat}
-                      onClick={() => setFilter(cat)}
-                      className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors
-                        ${filter === cat 
-                          ? 'bg-slate-800 text-white' 
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-                    >
-                      {cat === 'all' ? 'הכל' : cat}
-                    </button>
-                  ))}
-                </div>
-                
-                <div className="flex items-center gap-3 w-full md:w-auto">
-                  <button 
-                    onClick={() => setSortBy(sortBy === 'views' ? 'default' : 'views')}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition border
-                      ${sortBy === 'views' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
-                  >
-                    <TrendingUp size={16} />
-                    פופולרי
-                  </button>
-                  <div className="relative w-full md:w-64">
-                    <input 
-                      type="text" 
-                      placeholder="חיפוש דוח..." 
-                      className="w-full pl-4 pr-10 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                    <Search className="absolute top-2.5 right-3 text-slate-400" size={18} />
-                  </div>
-                </div>
-              </div>
-
-              <div className={viewMode === 'grid' ? "grid md:grid-cols-2 lg:grid-cols-3 gap-6" : "space-y-4"}>
-                {filteredDashboards.map(dash => (
-                  <div 
-                    key={dash.id} 
-                    onClick={() => setSelectedDashboard(dash)}
-                    className={`group bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300 cursor-pointer
-                      ${viewMode === 'list' ? 'flex flex-row items-center p-4 gap-6' : 'p-6 hover:-translate-y-1'}`}
-                  >
-                    <div className={`${viewMode === 'list' ? '' : 'flex justify-between items-start mb-4'}`}>
-                      <div className={`p-3 rounded-xl ${dash.color} text-white shadow-md group-hover:scale-110 transition-transform ${viewMode === 'list' ? 'shrink-0' : ''}`}>
-                        <dash.icon size={24} />
-                      </div>
-                      {viewMode === 'grid' && (
-                        <span className="bg-slate-50 text-slate-600 text-xs px-2 py-1 rounded border border-slate-100 font-mono">
-                          {dash.system}
-                        </span>
-                      )}
-                    </div>
-                    
-                    <div className={viewMode === 'list' ? 'flex-grow' : ''}>
-                      <h3 className="text-xl font-bold text-slate-800 mb-2 group-hover:text-blue-600 transition-colors">
-                        {dash.title}
-                      </h3>
-                      <p className="text-slate-500 text-sm mb-2 line-clamp-2 h-10">
-                        {dash.description}
-                      </p>
-                      
-                      <div className={`flex items-center text-xs text-slate-400 ${viewMode === 'grid' ? 'justify-between pt-4 border-t border-slate-100' : 'gap-6 mt-2'}`}>
-                        {viewMode === 'list' && (
-                          <span className="bg-slate-50 text-slate-600 text-xs px-2 py-1 rounded border border-slate-100 font-mono">
-                            {dash.system}
-                          </span>
-                        )}
-                        <div className="flex items-center gap-1">
-                          <Eye size={14} /> {dash.viewsDisplay} צפיות
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Calendar size={14} /> {dash.updated}
-                        </div>
-                        {viewMode === 'list' && (
-                          <button className="mr-auto p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-blue-600 transition">
-                            <Share2 size={18} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {filteredDashboards.length === 0 && (
-                <div className="text-center py-20 text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                  <BarChart2 className="mx-auto mb-2 opacity-50" size={48} />
-                  <p>לא נמצאו דשבורדים התואמים את החיפוש</p>
-                </div>
-              )}
-
-              {selectedDashboard && (
-                <DashboardViewer data={selectedDashboard} onClose={() => setSelectedDashboard(null)} />
-              )}
-            </div>
-          );
-        };
-
-        // 3. Authorized Dashboard Module
-        const AuthorizedSite = ({ user, requests, onRequestSubmit }) => {
-          const [isGovIdAuthenticated, setIsGovIdAuthenticated] = useState(false);
-          const [auditLogs, setAuditLogs] = useState([]);
-          const [showRequestModal, setShowRequestModal] = useState(false);
-          const [newRequestData, setNewRequestData] = useState({ resource: '', reason: '' });
-
-          const myRequests = requests.filter(r => r.userId === user.id);
-
-          const addLog = (action, status, dashboard) => {
-            const newLog = {
-              id: Date.now(),
-              timestamp: new Date().toLocaleTimeString(),
-              action,
-              status,
-              dashboard,
-              user: user.name
-            };
-            setAuditLogs(prev => [newLog, ...prev].slice(0, 5));
-          };
-
-          const handleDashboardAccess = (dashboard) => {
-            const hasPermission = user.role === 'admin' || 
-                                  (user.department === dashboard.requiredGroup) ||
-                                  (!dashboard.requiredGroup);
-
-            if (!hasPermission) {
-              addLog('ניסיון גישה לדשבורד', 'נדחה (הרשאות)', dashboard.title);
-              const wantToRequest = window.confirm(`אין לך הרשאות לצפייה בדשבורד זה.\nהאם ברצונך להגיש בקשת גישה למנהל המערכת?`);
-              if (wantToRequest) {
-                setNewRequestData({ ...newRequestData, resource: dashboard.title });
-                setShowRequestModal(true);
-              }
-              return;
-            }
-
-            if (dashboard.sensitivity === 'HIGH' && !isGovIdAuthenticated) {
-              addLog('ניסיון גישה לדשבורד רגיש', 'נדחה (נדרש GovID)', dashboard.title);
-              const confirmAuth = window.confirm(`הדשבורד "${dashboard.title}" מוגדר כרגיש.\nהאם ברצונך לבצע הזדהות ממשלתית (GovID) כעת?`);
-              if (confirmAuth) {
-                setIsGovIdAuthenticated(true);
-                addLog('הזדהות GovID', 'הצלחה', 'מערכת');
-                alert('הזדהות GovID בוצעה בהצלחה.');
-              }
-            } else {
-              addLog('גישה לדשבורד', 'אושר', dashboard.title);
-              alert(`פותח את דשבורד: ${dashboard.title} (הצפנה TLS 1.3 פעילה)`);
-            }
-          };
-
-          const submitRequest = (e) => {
-            e.preventDefault();
-            if (!newRequestData.resource || !newRequestData.reason) return;
-            
-            onRequestSubmit({
-              resource: newRequestData.resource,
-              reason: newRequestData.reason,
-              userId: user.id,
-              userName: user.name
-            });
-            
-            setShowRequestModal(false);
-            setNewRequestData({ resource: '', reason: '' });
-            addLog('הגשת בקשת גישה', 'המתנה', newRequestData.resource);
-          };
-
-          return (
-            <div className="max-w-7xl mx-auto px-4 py-8 animate-fade-in">
-              <header className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                  <h2 className="text-3xl font-bold text-slate-800">אזור אישי - עובדים</h2>
-                  <p className="text-slate-500">ברוך הבא, {user.name}. רמת סיווג: {user.role === 'admin' ? 'גבוהה' : 'רגילה'}</p>
-                </div>
-                <div className="flex gap-2">
-                  <div className="flex items-center gap-1 bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-bold border border-green-200">
-                    <Lock size={12} /> TLS 1.3 Encrypted
-                  </div>
-                  <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-bold border border-blue-200">
-                    <ShieldCheck size={12} /> GDPR Compliant
-                  </div>
-                </div>
-              </header>
-
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-8 flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="flex items-center gap-6 w-full md:w-auto">
-                  <div className={`p-4 rounded-full border-4 ${isGovIdAuthenticated ? 'bg-green-50 border-green-100 text-green-600' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
-                    <Fingerprint size={32} />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-lg text-slate-800 mb-1">סטטוס הזדהות (Dual Auth)</h4>
-                    <div className="flex flex-col gap-1 text-sm">
-                      <span className="flex items-center gap-2 text-slate-600">
-                        <BadgeCheck size={16} className="text-blue-500" />
-                        מחובר דרך: <b>Corporate SSO (Azure AD)</b>
-                      </span>
-                      <span className={`flex items-center gap-2 ${isGovIdAuthenticated ? 'text-green-600' : 'text-slate-400'}`}>
-                        {isGovIdAuthenticated ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
-                        {isGovIdAuthenticated ? 'הזדהות ממשלתית (GovID) פעילה' : 'נדרשת הזדהות ממשלתית למשאבים רגישים'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                {!isGovIdAuthenticated && (
-                  <button 
-                    onClick={() => {
-                      setIsGovIdAuthenticated(true);
-                      addLog('הזדהות GovID יזומה', 'הצלחה', 'מערכת');
-                    }}
-                    className="w-full md:w-auto bg-slate-900 text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-slate-800 transition flex items-center justify-center gap-2 shadow-lg shadow-slate-200"
-                  >
-                    <Fingerprint size={18} /> בצע הזדהות ממשלתית
-                  </button>
-                )}
-              </div>
-
-              <div className="grid md:grid-cols-3 gap-8">
-                <div className="md:col-span-2 space-y-8">
-                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                    <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-slate-700 border-b pb-4">
-                      <FileKey className="text-blue-600" />
-                      מערכת דשבורדים למורשים
-                    </h3>
-                    <div className="grid gap-4">
-                      {MOCK_SECURE_DASHBOARDS.map((dash) => {
-                        const isHighSec = dash.sensitivity === 'HIGH';
-                        const isLocked = isHighSec && !isGovIdAuthenticated;
-
-                        return (
-                          <div key={dash.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition border border-slate-100 group">
-                            <div className="flex items-center gap-4">
-                              <div className={`p-2 rounded-lg transition-colors ${isHighSec ? 'bg-red-100 text-red-600 group-hover:bg-red-200' : 'bg-blue-100 text-blue-600 group-hover:bg-blue-200'}`}>
-                                {isLocked ? <Lock size={20} /> : <Activity size={20} />}
-                              </div>
-                              <div>
-                                <h4 className="font-bold text-slate-800">{dash.title}</h4>
-                                <div className="flex items-center gap-2 text-xs text-slate-500">
-                                  <span>{dash.system}</span>
-                                  <span>•</span>
-                                  <span className={`flex items-center gap-1 ${isHighSec ? 'text-red-600 font-bold' : 'text-blue-600'}`}>
-                                    {isHighSec && <Shield size={10} />}
-                                    {isHighSec ? 'סיווג גבוה (GovID)' : 'סיווג רגיל'}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                            <button 
-                              onClick={() => handleDashboardAccess(dash)}
-                              className={`px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm
-                                ${isLocked 
-                                  ? 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50' 
-                                  : 'bg-blue-600 text-white hover:bg-blue-700'}`}
-                            >
-                              {isLocked ? 'נדרש אימות נוסף' : 'פתח דשבורד'}
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                    <div className="flex justify-between items-center mb-4 border-b pb-4">
-                        <h3 className="text-lg font-bold flex items-center gap-2 text-slate-700">
-                          <MessageSquare className="text-orange-500" />
-                          בקשות הגישה שלי
-                        </h3>
-                        <button 
-                          onClick={() => setShowRequestModal(true)}
-                          className="bg-orange-500 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-orange-600 transition flex items-center gap-1 shadow-sm"
-                        >
-                          + בקשה חדשה
-                        </button>
-                    </div>
-
-                    <div className="space-y-3">
-                        {myRequests.length === 0 && <p className="text-slate-500 text-center py-4">לא נמצאו בקשות גישה פעילות.</p>}
-                        {myRequests.map(req => (
-                          <div key={req.id} className="p-3 bg-slate-50 rounded-lg border border-slate-100 flex items-center justify-between">
-                            <div>
-                                <div className="font-bold text-slate-800">{req.resource}</div>
-                                <div className="text-xs text-slate-500">{req.date} • {req.reason}</div>
-                            </div>
-                            <div className="flex flex-col items-end gap-1">
-                                <span className={`px-2 py-1 rounded text-xs font-bold border
-                                  ${req.status === 'approved' ? 'bg-green-50 text-green-700 border-green-200' : 
-                                    req.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
-                                    'bg-yellow-50 text-yellow-700 border-yellow-200'}`}>
-                                  {req.status === 'approved' ? 'מאושר' : req.status === 'rejected' ? 'נדחה' : 'בטיפול'}
-                                </span>
-                                {req.log.length > 0 && <span className="text-[10px] text-slate-400">{req.log[req.log.length-1]}</span>}
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-6">
-                  <div className="bg-slate-50 rounded-xl border border-slate-200 p-5 h-full max-h-[600px] flex flex-col">
-                    <h3 className="text-sm font-bold mb-4 flex items-center gap-2 text-slate-700 uppercase tracking-wider">
-                      <History size={16} /> יומן פעילות (Audit Log)
-                    </h3>
-                    <div className="space-y-4 overflow-y-auto pr-2 custom-scrollbar flex-grow">
-                      {auditLogs.length === 0 && <p className="text-xs text-slate-400 text-center mt-10">אין פעילות מתועדת בסשן זה.</p>}
-                      {auditLogs.map((log) => (
-                        <div key={log.id} className="text-xs relative pl-4 border-r-2 border-slate-300 mr-1">
-                          <div className={`absolute -right-[5px] top-1.5 w-2 h-2 rounded-full ${log.status === 'אושר' || log.status === 'הצלחה' ? 'bg-green-500' : 'bg-slate-400'}`}></div>
-                          <div className="flex justify-between text-slate-500 mb-1">
-                            <span className="font-mono">{log.timestamp}</span>
-                            <span className={log.status === 'אושר' || log.status === 'הצלחה' ? 'text-green-600 font-bold' : 'text-red-500 font-bold'}>
-                              {log.status}
-                            </span>
-                          </div>
-                          <div className="font-medium text-slate-800">{log.action}</div>
-                          <div className="text-slate-500 truncate mt-0.5">{log.dashboard}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-                    <h3 className="text-sm font-bold mb-3 text-slate-700 uppercase">קישורים מהירים</h3>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button className="p-2 bg-slate-50 rounded hover:bg-slate-100 text-xs text-slate-700 text-center transition border border-transparent hover:border-slate-200">
-                        דיווח שעות
-                      </button>
-                      <button className="p-2 bg-slate-50 rounded hover:bg-slate-100 text-xs text-slate-700 text-center transition border border-transparent hover:border-slate-200">
-                        קריאת שירות
-                      </button>
-                      <button className="p-2 bg-slate-50 rounded hover:bg-slate-100 text-xs text-slate-700 text-center transition border border-transparent hover:border-slate-200">
-                        מערכת למידה
-                      </button>
-                      <button className="p-2 bg-slate-50 rounded hover:bg-slate-100 text-xs text-slate-700 text-center transition border border-transparent hover:border-slate-200">
-                        פורטל רווחה
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {showRequestModal && (
-                <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-                  <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-fade-in">
-                    <h3 className="text-xl font-bold mb-4 text-slate-800">הגשת בקשת גישה</h3>
-                    <form onSubmit={submitRequest} className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">שם המשאב / דשבורד</label>
-                          <input 
-                              type="text" 
-                              className="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                              value={newRequestData.resource}
-                              onChange={e => setNewRequestData({...newRequestData, resource: e.target.value})}
-                              placeholder="לדוגמה: ניהול מלאי"
-                              required
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">סיבת הבקשה</label>
-                          <textarea 
-                              className="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                              rows="3"
-                              value={newRequestData.reason}
-                              onChange={e => setNewRequestData({...newRequestData, reason: e.target.value})}
-                              placeholder="פרט את הצורך העסקי..."
-                              required
-                          ></textarea>
-                        </div>
-                        <div className="flex gap-2 justify-end mt-6">
-                          <button 
-                              type="button" 
-                              onClick={() => setShowRequestModal(false)}
-                              className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition"
-                          >
-                            ביטול
-                          </button>
-                          <button 
-                              type="submit" 
-                              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-lg shadow-blue-200"
-                          >
-                            שלח בקשה
-                          </button>
-                        </div>
-                    </form>
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        };
-
-        // 4. Data Catalog Module
-        const DataCatalog = ({ currentUser }) => { 
-          const [search, setSearch] = useState('');
-          const [filters, setFilters] = useState({
-            classification: 'all',
-            type: 'all',
-            department: 'all'
-          });
-          const [expandedId, setExpandedId] = useState(null);
-
-          const allClassifications = ['all', ...new Set(MOCK_DATA_CATALOG.map(i => i.classification))];
-          const allTypes = ['all', ...new Set(MOCK_DATA_CATALOG.map(i => i.type))];
-          const allDepartments = ['all', ...new Set(MOCK_DATA_CATALOG.map(i => i.department))];
-
-          const filteredData = MOCK_DATA_CATALOG.filter(item => {
-            const matchesSearch = item.name.includes(search) || 
-                                  (item.tags && item.tags.some(t => t.includes(search)));
-            const matchesClass = filters.classification === 'all' || item.classification === filters.classification;
-            const matchesType = filters.type === 'all' || item.type === filters.type;
-            const matchesDept = filters.department === 'all' || item.department === filters.department;
-            
-            return matchesSearch && matchesClass && matchesType && matchesDept;
-          });
-
-          const checkDownloadPermission = (item) => {
-            if (!currentUser) return false;
-            if (currentUser.role === 'admin') return true;
-            if (item.classification === 'ציבורי') return true;
-            // Basic permissions logic: User can access if same department
-            if (currentUser.department === item.department) return true;
-            return false;
-          };
-
-          const handleDownload = (item) => {
-            if (checkDownloadPermission(item)) {
-              alert(`מתחיל הורדה: ${item.name}\nגודל: ${item.size}\nפורמט: ${item.type}`);
-            } else {
-              alert('אין לך הרשאות להורדת קובץ זה. אנא פנה לבעלי הדאטה או למנהל המערכת.');
-            }
-          };
-
-          const toggleExpand = (id) => {
-            setExpandedId(expandedId === id ? null : id);
-          };
-
-          return (
-            <div className="max-w-7xl mx-auto px-4 py-8 animate-fade-in">
-              <header className="mb-8">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                  <div>
-                    <h2 className="text-3xl font-bold text-slate-800 flex items-center gap-2">
-                      <Database className="text-blue-600" />
-                      קטלוג דאטה פנימי
-                    </h2>
-                    <p className="text-slate-500">אינדקס נתונים ארגוני - חיפוש, סינון וניהול מידע</p>
-                  </div>
-                  <div className="relative w-full md:w-80">
-                    <input 
-                      type="text" 
-                      placeholder="חיפוש חופשי (שם, תגיות)..." 
-                      className="pl-4 pr-10 py-3 border border-slate-300 rounded-xl w-full focus:ring-2 focus:ring-blue-500 outline-none shadow-sm transition"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      aria-label="חיפוש בקטלוג"
-                    />
-                    <Search className="absolute top-3.5 right-3 text-slate-400" size={18} />
-                  </div>
-                </div>
-
-                {/* Enhanced Filters */}
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 items-center">
-                  <div className="flex items-center gap-2 text-slate-700 font-semibold text-sm">
-                    <Filter size={16} /> סינון מתקדם:
-                  </div>
-                  <div className="flex gap-4 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-500 whitespace-nowrap">סיווג:</span>
-                      <select 
-                        value={filters.classification} 
-                        onChange={(e) => setFilters({...filters, classification: e.target.value})}
-                        className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-blue-500"
-                      >
-                        <option value="all">הכל</option>
-                        {allClassifications.filter(c => c !== 'all').map(c => <option key={c} value={c}>{c}</option>)}
-                      </select>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-500 whitespace-nowrap">סוג קובץ:</span>
-                      <select 
-                        value={filters.type} 
-                        onChange={(e) => setFilters({...filters, type: e.target.value})}
-                        className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-blue-500"
-                      >
-                        <option value="all">הכל</option>
-                        {allTypes.filter(t => t !== 'all').map(t => <option key={t} value={t}>{t}</option>)}
-                      </select>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-500 whitespace-nowrap">מחלקה:</span>
-                      <select 
-                        value={filters.department} 
-                        onChange={(e) => setFilters({...filters, department: e.target.value})}
-                        className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-blue-500"
-                      >
-                        <option value="all">הכל</option>
-                        {allDepartments.filter(t => t !== 'all').map(t => <option key={t} value={t}>{t}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                  <div className="flex-grow"></div>
-                  <div className="text-xs text-slate-400">
-                    נמצאו {filteredData.length} תוצאות
-                  </div>
-                </div>
-              </header>
-
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-right" aria-label="טבלת קטלוג נתונים">
-                    <thead className="bg-slate-50 text-slate-600 font-semibold text-sm border-b border-slate-200">
-                      <tr>
-                        <th className="p-4 w-10"></th>
-                        <th className="p-4">שם המאגר</th>
-                        <th className="p-4">תגיות</th>
-                        <th className="p-4 hidden md:table-cell">בעלים</th>
-                        <th className="p-4">סיווג</th>
-                        <th className="p-4">פעולות</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {filteredData.map((item) => {
-                        const isExpanded = expandedId === item.id;
-                        const canDownload = checkDownloadPermission(item);
-
-                        return (
-                          <React.Fragment key={item.id}>
-                            <tr 
-                              className={`hover:bg-slate-50 transition cursor-pointer ${isExpanded ? 'bg-blue-50/50' : ''}`}
-                              onClick={() => toggleExpand(item.id)}
-                            >
-                              <td className="p-4 text-slate-400">
-                                {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                              </td>
-                              <td className="p-4">
-                                <div className="font-bold text-slate-800 flex items-center gap-2">
-                                  <FileSpreadsheet size={16} className="text-blue-500" />
-                                  {item.name}
-                                </div>
-                                <div className="text-xs text-slate-500 md:hidden mt-1">{item.owner}</div>
-                              </td>
-                              <td className="p-4">
-                                <div className="flex flex-wrap gap-1">
-                                  {item.tags?.map(tag => (
-                                    <span key={tag} className="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-600 border border-slate-200 flex items-center gap-1">
-                                      <Tag size={10} /> {tag}
-                                    </span>
-                                  ))}
-                                </div>
-                              </td>
-                              <td className="p-4 text-slate-600 hidden md:table-cell">{item.owner}</td>
-                              <td className="p-4">
-                                <span className={`px-2 py-1 rounded-full text-xs font-semibold
-                                  ${item.classification === 'סודי ביותר' ? 'bg-red-100 text-red-700' : 
-                                    item.classification === 'סודי' ? 'bg-orange-100 text-orange-700' :
-                                    item.classification === 'פנימי' ? 'bg-blue-100 text-blue-700' :
-                                    'bg-green-100 text-green-700'}`}>
-                                  {item.classification}
-                                </span>
-                              </td>
-                              <td className="p-4">
-                                <button 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDownload(item);
-                                  }}
-                                  className={`flex items-center gap-1 text-sm font-medium px-3 py-1.5 rounded transition
-                                    ${canDownload 
-                                      ? 'text-blue-600 hover:bg-blue-100' 
-                                      : 'text-slate-400 cursor-not-allowed'}`}
-                                  title={canDownload ? 'הורד קובץ' : 'אין הרשאה להורדה'}
-                                >
-                                  {canDownload ? <Download size={16} /> : <Lock size={16} />}
-                                  <span className="hidden sm:inline">הורדה</span>
-                                </button>
-                              </td>
-                            </tr>
-                            
-                            {/* Expanded Content (Visual Data Preview & Metadata) */}
-                            {isExpanded && (
-                              <tr className="bg-slate-50/50 border-b border-slate-100">
-                                <td colSpan="6" className="p-0">
-                                  <div className="p-6 grid md:grid-cols-3 gap-6 animate-fade-in cursor-default" onClick={(e) => e.stopPropagation()}>
-                                    <div className="space-y-4">
-                                      <h4 className="font-bold text-slate-700 text-sm border-b pb-2 flex items-center gap-2">
-                                        <FileText size={16} /> מטא-דאטה
-                                      </h4>
-                                      <div className="grid grid-cols-2 gap-y-3 text-sm">
-                                        <span className="text-slate-500">גודל:</span>
-                                        <span className="font-mono font-bold text-slate-700">{item.size}</span>
-                                        <span className="text-slate-500">פורמט:</span>
-                                        <span className="bg-slate-200 px-2 rounded text-xs w-fit">{item.type}</span>
-                                        <span className="text-slate-500">עודכן:</span>
-                                        <span>{item.lastUpdate}</span>
-                                        <span className="text-slate-500">שורות:</span>
-                                        <span>{item.rowCount}</span>
-                                        <span className="text-slate-500">מחלקה:</span>
-                                        <span>{item.department}</span>
-                                      </div>
-                                      <p className="text-xs text-slate-600 mt-2 bg-white p-2 rounded border border-slate-200">
-                                        {item.description}
-                                      </p>
-                                      <div className="pt-2">
-                                        <button className="text-blue-600 text-xs hover:underline flex items-center gap-1">
-                                          <ExternalLink size={12} /> צפה במילון נתונים מלא
-                                        </button>
-                                      </div>
-                                    </div>
-
-                                    {/* Visual Preview Area */}
-                                    <div className="md:col-span-2 bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
-                                      <h4 className="font-bold text-slate-700 text-sm mb-4 flex items-center gap-2 justify-between">
-                                        <div className="flex items-center gap-2">
-                                           <Activity size={16} className="text-blue-500" /> 
-                                           תצוגה מקדימה (Preview)
-                                        </div>
-                                        <span className="text-xs text-slate-400 font-normal">נתונים לדוגמה בלבד</span>
-                                      </h4>
-                                      
-                                      <div className="flex flex-col gap-6">
-                                        {/* Visual Mock: Simple Bar Chart using CSS */}
-                                        <div className="w-full">
-                                           <div className="text-xs text-slate-500 mb-2">התפלגות ערכים (דוגמה)</div>
-                                           <div className="flex items-end justify-between h-24 gap-1 border-b border-slate-100 pb-1">
-                                             {[30, 50, 45, 80, 60, 75, 40, 90, 55, 70, 65, 85].map((h, i) => (
-                                               <div key={i} className="w-full bg-blue-100 hover:bg-blue-500 transition-colors rounded-t-sm relative group" style={{height: `${h}%`}}>
-                                                  <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-1 rounded opacity-0 group-hover:opacity-100 transition">{h}%</div>
-                                               </div>
-                                             ))}
-                                           </div>
-                                        </div>
-
-                                        <div className="flex justify-between items-center bg-slate-50 p-3 rounded text-xs text-slate-600 border border-slate-100">
-                                          <div className="flex gap-4">
-                                            <div className="flex items-center gap-1">
-                                              <CheckSquare size={14} className="text-green-500" />
-                                              <span>מאומת ע"י Data Steward</span>
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                              <ShieldCheck size={14} className="text-blue-500" />
-                                              <span>תואם תקן GDPR</span>
-                                            </div>
-                                          </div>
-                                          <div>
-                                             <span className="font-bold">ציון איכות:</span> {item.qualityScore}%
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </td>
-                              </tr>
-                            )}
-                          </React.Fragment>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-                {filteredData.length === 0 && (
-                  <div className="p-12 text-center">
-                    <Database className="mx-auto h-12 w-12 text-slate-300 mb-3" />
-                    <h3 className="text-lg font-medium text-slate-900">לא נמצאו נתונים</h3>
-                    <p className="text-slate-500">נסה לשנות את מסנני החיפוש או הסיווג.</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        };
-
-        // 5. Supplier Portal Module
-        const SupplierPortal = ({ user }) => {
-          const [activeTab, setActiveTab] = useState('orders');
-          const [supplierFiles, setSupplierFiles] = useState([
-            { 
-              id: 1, 
-              name: 'inventory_update_q3.csv', 
-              type: 'csv',
-              version: 3, 
-              status: 'validated', 
-              date: '2024-05-20', 
-              size: '2.4 MB',
-              logs: [
-                { date: '2024-05-20 14:30', event: 'העלאת קובץ גרסה 3', status: 'success' },
-                { date: '2024-05-20 14:31', event: 'בדיקת מבנה CSV', status: 'success' },
-                { date: '2024-05-18 09:00', event: 'העלאת קובץ גרסה 2', status: 'success' },
-                { date: '2024-05-10 11:15', event: 'העלאת קובץ גרסה 1', status: 'success' }
-              ] 
-            },
-            { 
-              id: 2, 
-              name: 'pricing_matrix.json', 
-              type: 'json',
-              version: 1, 
-              status: 'error', 
-              date: '2024-05-21', 
-              size: '0.8 MB',
-              logs: [
-                { date: '2024-05-21 08:45', event: 'העלאת קובץ גרסה 1', status: 'success' },
-                { date: '2024-05-21 08:46', event: 'בדיקת סכמה (Schema Validation)', status: 'error', details: 'שדה חובה חסר: price_id' },
-                { date: '2024-05-21 08:46', event: 'שליחת התראה לספק', status: 'info' }
-              ] 
-            }
-          ]);
-          
-          const [isUploading, setIsUploading] = useState(false);
-          const [uploadStatus, setUploadStatus] = useState(null);
-          const [expandedFileId, setExpandedFileId] = useState(null);
-
-          const canUpload = user.role === 'supplier' || user.role === 'admin';
-
-          const getFileIcon = (fileName) => {
-            if (fileName.endsWith('.json')) return <FileJson className="text-yellow-600" size={24} />;
-            if (fileName.endsWith('.csv') || fileName.endsWith('.xlsx')) return <FileSpreadsheet className="text-green-600" size={24} />;
-            return <FileText className="text-slate-400" size={24} />;
-          };
-
-          const handleFileUpload = (event) => {
-            if (!canUpload) {
-                alert("אין לך הרשאה להעלות קבצים.");
-                return;
-            }
-            const file = event.target.files[0];
-            if (!file) return;
-
-            setUploadStatus(null);
-            setIsUploading(true);
-
-            // File type validation
-            const validExtensions = ['csv', 'xlsx', 'xls', 'json'];
-            const fileExt = file.name.split('.').pop().toLowerCase();
-
-            if (!validExtensions.includes(fileExt)) {
-              setUploadStatus({ type: 'error', message: `שגיאה: סוג קובץ .${fileExt} אינו נתמך. יש להעלות CSV, Excel או JSON.` });
-              setIsUploading(false);
-              return;
-            }
-
-            // Simulate process
-            setTimeout(() => {
-              const isSuccess = Math.random() > 0.3; // 70% success chance
-              const timestamp = new Date().toLocaleString('he-IL');
-              
-              let newLogEntry = [];
-              let status = 'validated';
-              let message = 'הקובץ עבר את כל בדיקות התקינות (מבנה, סוג נתונים, וירוסים) ונשמר בהצלחה.';
-
-              if (isSuccess) {
-                newLogEntry = [
-                    { date: timestamp, event: `העלאת קובץ (אוטומטי)`, status: 'success' },
-                    { date: timestamp, event: 'בדיקת תקינות מבנית', status: 'success' },
-                    { date: timestamp, event: 'בדיקת תוכן עסקי', status: 'success' }
-                ];
-                setUploadStatus({ type: 'success', message });
-              } else {
-                status = 'error';
-                message = 'שגיאת ולידציה: מבנה הקובץ אינו תואם לסכמה. הודעה נשלחה למייל הספק.';
-                newLogEntry = [
-                    { date: timestamp, event: `ניסיון העלאה`, status: 'success' },
-                    { date: timestamp, event: 'בדיקת תקינות נכשלה', status: 'error', details: 'Invalid Column Header' },
-                    { date: timestamp, event: 'שליחת התראה אוטומטית', status: 'info' }
-                ];
-                setUploadStatus({ type: 'error', message });
-              }
-
-              setSupplierFiles(prev => {
-                const existingIndex = prev.findIndex(f => f.name === file.name);
-                if (existingIndex >= 0) {
-                    // Update version
-                    const updatedFiles = [...prev];
-                    const currentFile = updatedFiles[existingIndex];
-                    updatedFiles[existingIndex] = {
-                        ...currentFile,
-                        version: currentFile.version + 1,
-                        date: new Date().toLocaleDateString('en-CA'),
-                        status: status,
-                        logs: [...newLogEntry, ...currentFile.logs]
-                    };
-                    return updatedFiles;
-                } else {
-                    // New file
-                    return [{
-                        id: Date.now(),
-                        name: file.name,
-                        type: fileExt,
-                        version: 1,
-                        status: status,
-                        date: new Date().toLocaleDateString('en-CA'),
-                        size: (file.size / 1024 / 1024).toFixed(2) + ' MB',
-                        logs: newLogEntry
-                    }, ...prev];
-                }
-              });
-
-              setIsUploading(false);
-            }, 2500);
-          };
-
-          return (
-            <div className="max-w-7xl mx-auto px-4 py-8 animate-fade-in">
-              <header className="mb-8 bg-blue-50 p-6 rounded-xl border border-blue-100 flex items-start gap-4">
-                <div className="bg-blue-600 p-3 rounded-lg text-white">
-                  <Truck size={32} />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-blue-900">פורטל ספקים - {user.name}</h2>
-                  <p className="text-blue-700 mt-1">
-                    גישה מאובטחת להזמנות, חשבוניות וסטטוס תשלומים.
-                    <br />
-                    <span className="text-xs opacity-75 flex items-center gap-1 mt-2">
-                      <Lock size={12} /> תקשורת מוצפנת (TLS 1.3)
-                    </span>
-                  </p>
-                </div>
-              </header>
-
-              <div className="flex gap-4 mb-6 border-b border-slate-200">
-                <button 
-                  onClick={() => setActiveTab('orders')}
-                  className={`pb-2 px-4 font-medium transition ${activeTab === 'orders' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  הזמנות רכש
-                </button>
-                <button 
-                  onClick={() => setActiveTab('files')}
-                  className={`pb-2 px-4 font-medium transition ${activeTab === 'files' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  ניהול קבצים וחשבוניות
-                </button>
-              </div>
-
-              {activeTab === 'orders' && (
-                <div className="animate-fade-in">
-                  <h3 className="text-xl font-bold mb-4 text-slate-800">הזמנות רכש אחרונות</h3>
-                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                    <table className="w-full text-right">
-                      <thead className="bg-slate-50 text-slate-600 font-semibold text-sm">
-                        <tr>
-                          <th className="p-4">מספר הזמנה</th>
-                          <th className="p-4">תאריך</th>
-                          <th className="p-4">סכום</th>
-                          <th className="p-4">סטטוס</th>
-                          <th className="p-4">מסמכים</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {MOCK_SUPPLIER_ORDERS.map((order) => (
-                          <tr key={order.id} className="hover:bg-slate-50 transition">
-                            <td className="p-4 font-mono text-slate-700">{order.id}</td>
-                            <td className="p-4 text-slate-600">{order.date}</td>
-                            <td className="p-4 font-bold text-slate-800">{order.amount}</td>
-                            <td className="p-4">
-                              <span className={`px-2 py-1 rounded-full text-xs font-semibold
-                                ${order.status === 'אושר' ? 'bg-green-100 text-green-700' : 
-                                  order.status === 'בטיפול' ? 'bg-yellow-100 text-yellow-700' :
-                                  'bg-blue-100 text-blue-700'}`}>
-                                {order.status}
-                              </span>
-                            </td>
-                            <td className="p-4">
-                              <button className="flex items-center gap-1 text-slate-500 hover:text-blue-600 transition">
-                                <FileText size={16} />
-                                <span className="text-sm">צפה בחשבונית</span>
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'files' && (
-                <div className="animate-fade-in space-y-6">
-                  <div className="bg-white p-6 rounded-xl border border-dashed border-slate-300 text-center hover:bg-slate-50 transition relative">
-                    <input 
-                        type="file" 
-                        onChange={handleFileUpload} 
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                        disabled={isUploading || !canUpload}
-                    />
-                    <div className="flex flex-col items-center gap-2">
-                        <div className="bg-blue-100 p-3 rounded-full text-blue-600">
-                          {isUploading ? <RefreshCw className="animate-spin" size={24} /> : <Upload size={24} />}
-                        </div>
-                        <h4 className="font-bold text-slate-700">
-                          {isUploading ? 'מעבד קובץ...' : 'לחץ או גרור קבצים להעלאה'}
-                        </h4>
-                        <p className="text-sm text-slate-500">
-                          תמיכה ב-PDF, CSV, Excel, JSON. בדיקת תקינות אוטומטית לפני שמירה.
-                        </p>
-                        {!canUpload && <p className="text-xs text-red-500">אין הרשאות העלאה למשתמש זה</p>}
-                    </div>
-                  </div>
-
-                  {uploadStatus && (
-                    <div className={`p-4 rounded-lg flex items-start gap-3 ${uploadStatus.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`}>
-                      {uploadStatus.type === 'error' ? <AlertCircle size={20} /> : <CheckCircle size={20} />}
-                      <div>
-                        <p className="font-bold">{uploadStatus.type === 'error' ? 'שגיאה בהעלאה' : 'העלאה הושלמה'}</p>
-                        <p className="text-sm">{uploadStatus.message}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-                    <div className="p-4 border-b border-slate-100 bg-slate-50 rounded-t-xl font-bold text-slate-700 flex justify-between items-center">
-                      <span>מאגר קבצים וגרסאות</span>
-                      <span className="text-xs font-normal text-slate-500">סה"כ {supplierFiles.length} קבצים</span>
-                    </div>
-                    <div className="divide-y divide-slate-100">
-                      {supplierFiles.map(file => {
-                        const isExpanded = expandedFileId === file.id;
-                        return (
-                          <div key={file.id} className="transition-colors hover:bg-slate-50">
-                            <div 
-                                className="p-4 flex items-center justify-between cursor-pointer"
-                                onClick={() => setExpandedFileId(isExpanded ? null : file.id)}
-                            >
-                              <div className="flex items-center gap-3">
-                                  {getFileIcon(file.name)}
-                                  <div>
-                                    <div className="font-medium text-slate-800">{file.name}</div>
-                                    <div className="text-xs text-slate-500 flex gap-2">
-                                      <span className="bg-slate-100 px-1.5 rounded">v{file.version}</span>
-                                      <span>•</span>
-                                      <span>{file.date}</span>
-                                      <span>•</span>
-                                      <span>{file.size}</span>
-                                    </div>
-                                  </div>
-                              </div>
-                              <div className="flex items-center gap-4">
-                                  <span className={`text-xs px-2 py-1 rounded-full font-bold flex items-center gap-1 ${file.status === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-                                    {file.status === 'error' ? <AlertTriangle size={10} /> : <CheckCircle size={10} />}
-                                    {file.status === 'error' ? 'שגיאה' : 'תקין'}
-                                  </span>
-                                  <div className="text-slate-400">
-                                    {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                                  </div>
-                              </div>
-                            </div>
-                            
-                            {/* Logs Expansion */}
-                            {isExpanded && (
-                                <div className="bg-slate-50 p-4 border-t border-slate-100 text-sm">
-                                    <h5 className="font-bold text-slate-700 mb-2 flex items-center gap-2">
-                                        <History size={14} /> לוג היסטוריית עיבוד
-                                    </h5>
-                                    <div className="space-y-2 pl-2 border-r-2 border-slate-200 mr-1">
-                                        {file.logs.map((log, idx) => (
-                                            <div key={idx} className="flex gap-4 text-xs relative pr-4">
-                                                <div className={`absolute -right-[5px] top-1.5 w-2 h-2 rounded-full ${log.status === 'error' ? 'bg-red-500' : log.status === 'info' ? 'bg-blue-400' : 'bg-green-500'}`}></div>
-                                                <span className="text-slate-400 w-24 flex-shrink-0">{log.date.split(' ')[1]}</span>
-                                                <div className="flex-grow">
-                                                    <span className={`font-medium ${log.status === 'error' ? 'text-red-700' : 'text-slate-700'}`}>
-                                                        {log.event}
-                                                    </span>
-                                                    {log.details && <div className="text-red-500 mt-0.5">{log.details}</div>}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    {file.status === 'error' && (
-                                        <div className="mt-4 bg-red-50 border border-red-100 p-3 rounded text-red-700 flex items-center gap-2 text-xs">
-                                            <Mail size={14} />
-                                            <span>התראה נשלחה אוטומטית לכתובת המייל של הספק אודות השגיאה.</span>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        };
-
-        // 6. Permissions Management Module (Admin)
-        const PermissionsModule = ({ requests, onRequestUpdate }) => {
-          const [activeTab, setActiveTab] = useState('requests'); // requests | users | logs
-          const [requestFilter, setRequestFilter] = useState('all');
-
-          const filteredRequests = requests.filter(r => 
-            requestFilter === 'all' || r.status === requestFilter
-          );
-
-          const handleAction = (request, status) => {
-            const adminNote = status === 'approved' ? 'אושר ע"י Admin' : 'נדחה ע"י Admin';
-            onRequestUpdate(request.id, status, adminNote);
-          };
-
-          const getStatusBadge = (status) => {
-            switch(status) {
-              case 'approved': return <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-bold border border-green-200">מאושר</span>;
-              case 'rejected': return <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-bold border border-red-200">נדחה</span>;
-              default: return <span className="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-xs font-bold border border-yellow-200">ממתין</span>;
-            }
-          };
-
-          return (
-            <div className="max-w-7xl mx-auto px-4 py-8 animate-fade-in">
-              <header className="mb-8">
-                <h2 className="text-3xl font-bold text-slate-800 flex items-center gap-2">
-                  <Settings className="text-slate-800" />
-                  ניהול הרשאות ובקשות גישה
-                </h2>
-                <p className="text-slate-500">מודול ניהול גישה מרכזי (Identity Management)</p>
-              </header>
-
-              {/* Tabs */}
-              <div className="flex gap-4 border-b border-slate-200 mb-6">
-                <button 
-                  onClick={() => setActiveTab('requests')}
-                  className={`pb-3 px-4 font-medium transition flex items-center gap-2 ${activeTab === 'requests' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  <Clock size={18} /> בקשות גישה
-                </button>
-                <button 
-                  onClick={() => setActiveTab('users')}
-                  className={`pb-3 px-4 font-medium transition flex items-center gap-2 ${activeTab === 'users' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  <Users size={18} /> ניהול משתמשים
-                </button>
-                <button 
-                  onClick={() => setActiveTab('logs')}
-                  className={`pb-3 px-4 font-medium transition flex items-center gap-2 ${activeTab === 'logs' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  <History size={18} /> יומני אבטחה
-                </button>
-              </div>
-
-              {/* Requests Tab */}
-              {activeTab === 'requests' && (
-                <div className="grid md:grid-cols-4 gap-6">
-                  {/* Filters Sidebar */}
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 h-fit">
-                    <h4 className="font-bold text-slate-700 mb-4 flex items-center gap-2"><ListFilter size={16} /> סינון בקשות</h4>
-                    <div className="space-y-2">
-                      {['all', 'pending', 'approved', 'rejected'].map(status => (
-                        <button
-                          key={status}
-                          onClick={() => setRequestFilter(status)}
-                          className={`w-full text-right px-3 py-2 rounded text-sm transition flex justify-between items-center
-                            ${requestFilter === status ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-600 hover:bg-slate-50'}`}
-                        >
-                          {status === 'all' ? 'כל הבקשות' : status === 'pending' ? 'ממתין לטיפול' : status === 'approved' ? 'מאושר' : 'נדחה'}
-                          <span className="bg-white px-1.5 rounded-full text-xs border border-slate-200">
-                            {requests.filter(r => status === 'all' || r.status === status).length}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Requests List */}
-                  <div className="md:col-span-3 space-y-4">
-                    {filteredRequests.length === 0 && <div className="text-center py-10 text-slate-400 bg-white rounded-xl border border-slate-200">לא נמצאו בקשות תואמות.</div>}
-                    {filteredRequests.map(req => (
-                      <div key={req.id} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition">
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex items-center gap-3">
-                            <div className="bg-slate-100 p-2 rounded-full"><UserCheck size={20} className="text-slate-600" /></div>
-                            <div>
-                              <h4 className="font-bold text-slate-800">{req.userName}</h4>
-                              <div className="text-xs text-slate-500">משאב מבוקש: <span className="font-semibold text-blue-600">{req.resource}</span></div>
-                            </div>
-                          </div>
-                          {getStatusBadge(req.status)}
-                        </div>
-                        
-                        <div className="bg-slate-50 p-3 rounded text-sm text-slate-600 mb-4 border border-slate-100">
-                          <span className="font-bold">סיבה:</span> {req.reason}
-                        </div>
-
-                        <div className="flex justify-between items-center border-t border-slate-100 pt-3">
-                          <div className="text-xs text-slate-400 flex items-center gap-1"><Clock size={12} /> {req.date}</div>
-                          
-                          {req.status === 'pending' && (
-                            <div className="flex gap-2">
-                              <button 
-                                onClick={() => handleAction(req, 'rejected')}
-                                className="px-3 py-1.5 text-red-600 hover:bg-red-50 rounded text-sm border border-transparent hover:border-red-100 transition"
-                              >
-                                דחה
-                              </button>
-                              <button 
-                                onClick={() => handleAction(req, 'approved')}
-                                className="px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700 shadow-sm transition"
-                              >
-                                אשר בקשה
-                              </button>
-                            </div>
-                          )}
-                          {req.status !== 'pending' && (
-                            <div className="text-xs text-slate-500">
-                              טופל ע"י Admin • {req.log[req.log.length-1]}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Users Tab */}
-              {activeTab === 'users' && (
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                  <table className="w-full text-right">
-                    <thead className="bg-slate-50 text-slate-600 font-semibold text-sm">
-                      <tr>
-                        <th className="p-4">שם משתמש</th>
-                        <th className="p-4">תפקיד</th>
-                        <th className="p-4">מחלקה</th>
-                        <th className="p-4">סטטוס</th>
-                        <th className="p-4">כניסה אחרונה</th>
-                        <th className="p-4">פעולות</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-sm">
-                      {MOCK_USERS.map(u => (
-                        <tr key={u.id} className="hover:bg-slate-50">
-                          <td className="p-4 font-medium text-slate-800">{u.name}</td>
-                          <td className="p-4"><span className="bg-slate-100 px-2 py-1 rounded text-xs font-mono">{u.role}</span></td>
-                          <td className="p-4">{u.department}</td>
-                          <td className="p-4">
-                            {u.status === 'active' 
-                              ? <span className="text-green-600 flex items-center gap-1 text-xs font-bold"><CheckCircle size={12}/> פעיל</span>
-                              : <span className="text-red-500 flex items-center gap-1 text-xs font-bold"><UserX size={12}/> מושהה</span>
-                            }
-                          </td>
-                          <td className="p-4 text-slate-500">{u.lastLogin}</td>
-                          <td className="p-4">
-                            <button className="text-blue-600 hover:bg-blue-50 p-1.5 rounded transition" title="ערוך משתמש">
-                              <UserCog size={16} />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {/* Logs Tab */}
-              {activeTab === 'logs' && (
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-                  <div className="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-                    <h3 className="font-bold text-slate-700">יומני מערכת (System Audit Logs)</h3>
-                    <button className="text-blue-600 text-sm hover:underline flex items-center gap-1"><Download size={14}/> ייצא ל-CSV</button>
-                  </div>
-                  <div className="divide-y divide-slate-100 text-sm">
-                    {MOCK_SYSTEM_LOGS.map(log => (
-                      <div key={log.id} className="p-4 flex items-center justify-between hover:bg-slate-50">
-                        <div className="flex items-center gap-4">
-                          <div className={`p-2 rounded-full ${log.status === 'error' ? 'bg-red-100 text-red-600' : log.status === 'warning' ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>
-                            <Activity size={16} />
-                          </div>
-                          <div>
-                            <div className="font-bold text-slate-800">{log.event}</div>
-                            <div className="text-xs text-slate-500">משתמש: {log.user} • IP: {log.ip}</div>
-                          </div>
-                        </div>
-                        <div className="text-slate-400 font-mono text-xs">{log.time}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        };
-
-        // --- NEW MODULE: System Workflow Visualization ---
-        const SystemWorkflow = () => {
-          const [activeFlow, setActiveFlow] = useState('entry');
-
-          const WorkflowNode = ({ icon: Icon, label, color = 'bg-white', textColor = 'text-slate-700' }) => (
-            <div className={`flex flex-col items-center p-4 rounded-xl border-2 border-slate-200 shadow-sm ${color} w-40 text-center z-10 transition hover:scale-105`}>
-              <Icon className={`mb-2 ${textColor}`} size={24} />
-              <span className={`text-sm font-bold ${textColor}`}>{label}</span>
-            </div>
-          );
-
-          const Arrow = ({ label }) => (
-            <div className="flex-grow flex flex-col items-center justify-center px-2 relative min-w-[50px]">
-              {label && <span className="text-[10px] text-slate-500 mb-1 bg-white px-1 relative z-20">{label}</span>}
-              <div className="w-full h-0.5 bg-slate-300 relative">
-                <div className="absolute left-0 -top-1.5 text-slate-300">◄</div>
-              </div>
-            </div>
-          );
-
-          const renderFlow = () => {
-            switch (activeFlow) {
-              case 'entry':
-                return (
-                  <div className="flex flex-col gap-8 items-center justify-center h-full py-10">
-                    <h3 className="text-xl font-bold text-slate-700 mb-4">תהליך כניסה וזיהוי (User Entry Flow)</h3>
-                    <div className="flex items-center w-full max-w-4xl justify-between">
-                      <WorkflowNode icon={Server} label="דף נחיתה ציבורי" />
-                      <Arrow label="לחיצה על התחברות" />
-                      <WorkflowNode icon={LogIn} label="מסך התחברות" color="bg-blue-50" textColor="text-blue-700" />
-                      <Arrow label="בחירת תפקיד" />
-                      <WorkflowNode icon={Users} label="זיהוי משתמש" />
-                    </div>
-                    <div className="grid grid-cols-3 gap-4 mt-8 w-full max-w-4xl">
-                      <div className="text-center p-4 bg-slate-50 rounded border border-slate-200">
-                        <span className="font-bold block mb-1">אורח</span>
-                        <span className="text-xs text-slate-500">גישה לדשבורדים ציבוריים בלבד</span>
-                      </div>
-                      <div className="text-center p-4 bg-slate-50 rounded border border-slate-200">
-                        <span className="font-bold block mb-1">עובד/מנהל</span>
-                        <span className="text-xs text-slate-500">גישה מלאה (בכפוף להרשאות)</span>
-                      </div>
-                      <div className="text-center p-4 bg-slate-50 rounded border border-slate-200">
-                        <span className="font-bold block mb-1">ספק</span>
-                        <span className="text-xs text-slate-500">גישה לפורטל ספקים בלבד</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              case 'auth':
-                return (
-                  <div className="flex flex-col gap-8 items-center justify-center h-full py-10">
-                    <h3 className="text-xl font-bold text-slate-700 mb-4">אימות והרשאות (Auth & Permissions)</h3>
-                    <div className="flex items-center w-full max-w-5xl justify-between">
-                      <WorkflowNode icon={Fingerprint} label="משתמש מאומת" color="bg-green-50" textColor="text-green-700" />
-                      <Arrow label="בקשת גישה למודול" />
-                      <WorkflowNode icon={ShieldCheck} label="בדיקת תפקיד (Role Guard)" />
-                      <Arrow label="אימות" />
-                      <div className="flex flex-col gap-4">
-                        <div className="flex items-center gap-2">
-                            <div className="w-4 h-0.5 bg-slate-300"></div>
-                            <div className="p-2 border rounded bg-white text-xs w-32 text-center">הצלחה: הצג תוכן</div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <div className="w-4 h-0.5 bg-slate-300"></div>
-                            <div className="p-2 border rounded bg-red-50 text-red-600 text-xs w-32 text-center">כישלון: גישה נדחתה</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              case 'display':
-                return (
-                  <div className="flex flex-col gap-8 items-center justify-center h-full py-10">
-                    <h3 className="text-xl font-bold text-slate-700 mb-4">הצגת תוכן ומשאבים (Content Display)</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-5xl">
-                        <div className="border border-slate-200 p-4 rounded-xl flex flex-col items-center text-center">
-                          <BarChart2 className="text-blue-500 mb-2" />
-                          <h4 className="font-bold">דשבורדים</h4>
-                          <Arrow label="בדיקת רגישות" />
-                          <div className="text-xs mt-2 bg-slate-50 p-2 rounded w-full">
-                            אם רגיש {'->'} דרוש GovID
-                          </div>
-                        </div>
-                        <div className="border border-slate-200 p-4 rounded-xl flex flex-col items-center text-center">
-                          <Database className="text-purple-500 mb-2" />
-                          <h4 className="font-bold">קטלוג דאטה</h4>
-                          <Arrow label="סינון שורות" />
-                          <div className="text-xs mt-2 bg-slate-50 p-2 rounded w-full">
-                            הצגה לפי מחלקה/סיווג
-                          </div>
-                        </div>
-                        <div className="border border-slate-200 p-4 rounded-xl flex flex-col items-center text-center">
-                          <Truck className="text-orange-500 mb-2" />
-                          <h4 className="font-bold">פורטל ספקים</h4>
-                          <Arrow label="בדיקת קבצים" />
-                          <div className="text-xs mt-2 bg-slate-50 p-2 rounded w-full">
-                            ולידציה אוטומטית לקבצים
-                          </div>
-                        </div>
-                    </div>
-                  </div>
-                );
-              case 'requests':
-                return (
-                  <div className="flex flex-col gap-8 items-center justify-center h-full py-10">
-                    <h3 className="text-xl font-bold text-slate-700 mb-4">טיפול בבקשות גישה (Access Request Loop)</h3>
-                    <div className="flex flex-col md:flex-row items-center w-full max-w-5xl justify-between gap-4">
-                      <WorkflowNode icon={UserX} label="גישה נדחתה" color="bg-red-50" textColor="text-red-700" />
-                      <Arrow label="הגשת בקשה" />
-                      <WorkflowNode icon={Database} label="שמירה ב-DB (סטטוס: ממתין)" />
-                      <Arrow label="התראה למנהל" />
-                      <WorkflowNode icon={Settings} label="מסך ניהול (Admin)" color="bg-slate-800" textColor="text-white" />
-                    </div>
-                    <div className="w-full h-0.5 bg-slate-200 my-4 relative">
-                      <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-white px-2 text-xs text-slate-400 -mt-2">פעולת מנהל</div>
-                    </div>
-                    <div className="flex justify-center gap-16 w-full">
-                      <div className="flex flex-col items-center">
-                          <div className="h-8 w-0.5 bg-green-300 mb-2"></div>
-                          <div className="p-3 bg-green-50 text-green-700 border border-green-200 rounded-lg text-sm font-bold">אישור</div>
-                          <div className="text-xs text-slate-500 mt-1">עדכון הרשאות + הודעה</div>
-                      </div>
-                      <div className="flex flex-col items-center">
-                          <div className="h-8 w-0.5 bg-red-300 mb-2"></div>
-                          <div className="p-3 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm font-bold">דחייה</div>
-                          <div className="text-xs text-slate-500 mt-1">עדכון סטטוס + הודעה</div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              default: return null;
-            }
-          };
-
-          return (
-            <div className="max-w-7xl mx-auto px-4 py-8 animate-fade-in">
-              <header className="mb-8">
-                <h2 className="text-3xl font-bold text-slate-800 flex items-center gap-2">
-                  <GitBranch className="text-slate-800" />
-                  תרשים זרימת מערכת (Workflow Visualization)
-                </h2>
-                <p className="text-slate-500">מיפוי ויזואלי של התהליכים העסקיים, ההרשאות וזרימת המידע במערכת.</p>
-              </header>
-
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden min-h-[600px] flex flex-col">
-                {/* Workflow Navigation Tabs */}
-                <div className="flex border-b border-slate-200 bg-slate-50 overflow-x-auto">
-                  <button 
-                    onClick={() => setActiveFlow('entry')}
-                    className={`px-6 py-4 font-medium text-sm whitespace-nowrap transition-colors flex items-center gap-2
-                      ${activeFlow === 'entry' ? 'bg-white border-t-2 border-t-blue-600 text-blue-600' : 'text-slate-500 hover:bg-slate-100'}`}
-                  >
-                    <LogIn size={16} /> 1. כניסה וזיהוי
-                  </button>
-                  <button 
-                    onClick={() => setActiveFlow('auth')}
-                    className={`px-6 py-4 font-medium text-sm whitespace-nowrap transition-colors flex items-center gap-2
-                      ${activeFlow === 'auth' ? 'bg-white border-t-2 border-t-blue-600 text-blue-600' : 'text-slate-500 hover:bg-slate-100'}`}
-                  >
-                    <ShieldCheck size={16} /> 2. אימות והרשאות
-                  </button>
-                  <button 
-                    onClick={() => setActiveFlow('display')}
-                    className={`px-6 py-4 font-medium text-sm whitespace-nowrap transition-colors flex items-center gap-2
-                      ${activeFlow === 'display' ? 'bg-white border-t-2 border-t-blue-600 text-blue-600' : 'text-slate-500 hover:bg-slate-100'}`}
-                  >
-                    <Server size={16} /> 3. הצגת משאבים
-                  </button>
-                  <button 
-                    onClick={() => setActiveFlow('requests')}
-                    className={`px-6 py-4 font-medium text-sm whitespace-nowrap transition-colors flex items-center gap-2
-                      ${activeFlow === 'requests' ? 'bg-white border-t-2 border-t-blue-600 text-blue-600' : 'text-slate-500 hover:bg-slate-100'}`}
-                  >
-                    <MessageSquare size={16} /> 4. ניהול בקשות גישה
-                  </button>
-                </div>
-
-                {/* Visualization Area */}
-                <div className="flex-grow bg-slate-50/50 p-8 relative">
-                  {/* Background Grid Pattern */}
-                  <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
-                        style={{ backgroundImage: 'radial-gradient(#475569 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
-                  </div>
-                  
-                  {renderFlow()}
-                </div>
-              </div>
-            </div>
-          );
-        };
-
-        // 7. Login / Role Selection (Simulation)
-        const LoginScreen = ({ onLogin }) => {
-          return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] p-4 animate-fade-in">
-              <div className="bg-white p-8 rounded-2xl shadow-xl border border-slate-100 max-w-md w-full text-center">
-                <div className="bg-blue-100 p-4 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-6">
-                  <Lock className="text-blue-600" size={32} />
-                </div>
-                <h2 className="text-2xl font-bold mb-2 text-slate-800">התחברות למערכת</h2>
-                <p className="text-slate-500 mb-8">בחר פרופיל להדגמת הרשאות המערכת</p>
-                
-                <div className="space-y-3">
-                  <button 
-                    onClick={() => onLogin({ id: 1, name: 'ישראל ישראלי', role: ROLES.EMPLOYEE, department: 'finance' })}
-                    className="w-full p-4 border rounded-xl hover:bg-blue-50 hover:border-blue-200 transition flex items-center justify-between group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Users className="text-slate-400 group-hover:text-blue-500" />
-                      <div className="text-right">
-                        <div className="font-bold text-slate-700">עובד חברה (כספים)</div>
-                        <div className="text-xs text-slate-500">גישה לאזור אישי וקטלוג</div>
-                      </div>
-                    </div>
-                    <div className="w-2 h-2 rounded-full bg-slate-200 group-hover:bg-blue-500"></div>
-                  </button>
-
-                  <button 
-                    onClick={() => onLogin({ id: 2, name: 'ספקים פלוס בע"מ', role: ROLES.SUPPLIER, department: 'external' })}
-                    className="w-full p-4 border rounded-xl hover:bg-blue-50 hover:border-blue-200 transition flex items-center justify-between group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Truck className="text-slate-400 group-hover:text-blue-500" />
-                      <div className="text-right">
-                        <div className="font-bold text-slate-700">ספק חיצוני</div>
-                        <div className="text-xs text-slate-500">גישה לפורטל ספקים בלבד</div>
-                      </div>
-                    </div>
-                    <div className="w-2 h-2 rounded-full bg-slate-200 group-hover:bg-blue-500"></div>
-                  </button>
-
-                  <button 
-                    onClick={() => onLogin({ id: 3, name: 'Admin User', role: ROLES.ADMIN, department: 'it' })}
-                    className="w-full p-4 border rounded-xl hover:bg-blue-50 hover:border-blue-200 transition flex items-center justify-between group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Shield className="text-slate-400 group-hover:text-blue-500" />
-                      <div className="text-right">
-                        <div className="font-bold text-slate-700">מנהל מערכת</div>
-                        <div className="text-xs text-slate-500">גישה מלאה לכל המודולים</div>
-                      </div>
-                    </div>
-                    <div className="w-2 h-2 rounded-full bg-slate-200 group-hover:bg-blue-500"></div>
-                  </button>
-                </div>
-              </div>
-              <p className="mt-8 text-xs text-slate-400 flex items-center gap-1">
-                <Lock size={10} /> המערכת מאובטחת ומוצפנת מקצה לקצה
-              </p>
-            </div>
-          );
-        };
-
-        // 8. Access Denied Component
-        const AccessDenied = () => (
-          <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-4">
-            <div className="bg-red-100 p-4 rounded-full mb-4">
-              <Lock className="text-red-600" size={32} />
-            </div>
-            <h2 className="text-2xl font-bold text-slate-800 mb-2">גישה נדחתה</h2>
-            <p className="text-slate-600 max-w-md">
-              אין לך הרשאות מתאימות לצפייה במודול זה. אנא פנה למנהל המערכת או התחבר עם משתמש אחר.
-            </p>
-          </div>
-        );
-
-        // --- Main App Component ---
-
-        const App = () => {
-          const [currentUser, setCurrentUser] = useState(null);
-          const [currentView, setCurrentView] = useState('public');
-          // State for Access Requests (Shared between User and Admin)
-          const [accessRequests, setAccessRequests] = useState(MOCK_ACCESS_REQUESTS);
-
-          // Function to handle new request submission
-          const handleNewRequest = (requestData) => {
-            const newReq = {
-              id: Date.now(),
-              userId: requestData.userId,
-              userName: requestData.userName,
-              resource: requestData.resource,
-              reason: requestData.reason,
-              status: 'pending',
-              date: new Date().toLocaleDateString('en-CA'),
-              log: ['בקשה הוגשה']
-            };
-            setAccessRequests([newReq, ...accessRequests]);
-            alert('הבקשה נשלחה בהצלחה וממתינה לאישור מנהל.');
-          };
-
-          // Function to handle admin updates (Approve/Reject)
-          const handleRequestUpdate = (requestId, status, note) => {
-            const updatedRequests = accessRequests.map(req => {
-              if (req.id === requestId) {
-                return {
-                  ...req,
-                  status: status,
-                  log: [...req.log, note]
-                };
-              }
-              return req;
-            });
-            setAccessRequests(updatedRequests);
-            alert(`הבקשה עודכנה לסטטוס: ${status === 'approved' ? 'אושר' : 'נדחה'}`);
-          };
-
-          // Handle routing based on view state
-          const renderContent = () => {
-            switch (currentView) {
-              case 'public':
-                return <PublicSite />;
-
-              case 'public-dashboards':
-                return <PublicDashboards />;
-              
-              case 'login':
-                return <LoginScreen onLogin={(user) => {
-                  setCurrentUser(user);
-                  // Redirect based on role
-                  if (user.role === ROLES.SUPPLIER) setCurrentView('supplier');
-                  else if (user.role === ROLES.EMPLOYEE) setCurrentView('authorized');
-                  else setCurrentView('admin');
-                }} />;
-
-              case 'authorized':
-                if (!currentUser || (currentUser.role !== ROLES.EMPLOYEE && currentUser.role !== ROLES.ADMIN)) 
-                  return <AccessDenied />;
-                return <AuthorizedSite 
-                  user={currentUser} 
-                  requests={accessRequests} 
-                  onRequestSubmit={handleNewRequest} 
-                />;
-
-              case 'catalog':
-                if (!currentUser || (currentUser.role !== ROLES.EMPLOYEE && currentUser.role !== ROLES.ADMIN)) 
-                  return <AccessDenied />;
-                return <DataCatalog currentUser={currentUser} />;
-
-              case 'supplier':
-                if (!currentUser || (currentUser.role !== ROLES.SUPPLIER && currentUser.role !== ROLES.ADMIN)) 
-                  return <AccessDenied />;
-                return <SupplierPortal user={currentUser} />;
-
-              case 'admin':
-                if (!currentUser || currentUser.role !== ROLES.ADMIN) 
-                  return <AccessDenied />;
-                return <PermissionsModule 
-                  requests={accessRequests} 
-                  onRequestUpdate={handleRequestUpdate} 
-                />;
-              
-              case 'workflow':
-                return <SystemWorkflow />;
-
-              default:
-                return <PublicSite />;
-            }
-          };
-
-          return (
-            <div dir="rtl" className="min-h-screen bg-slate-50 font-sans text-slate-900 flex flex-col">
-              <Navbar 
-                currentUser={currentUser} 
-                currentView={currentView} 
-                setView={setCurrentView}
-                handleLogin={() => setCurrentView('login')}
-                handleLogout={() => {
-                  setCurrentUser(null);
-                  setCurrentView('public');
-                }}
-              />
-
-              <main className="flex-grow">
-                {renderContent()}
-              </main>
-
-              <footer className="bg-slate-900 text-slate-400 py-8 border-t border-slate-800 mt-auto">
-                <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4">
-                  <div className="text-sm">
-                    © 2024 מערכת אמו"ן מוניציפלי - כל הזכויות שמורות
-                  </div>
-                  <div className="flex items-center gap-6 text-xs font-mono">
-                    <span className="flex items-center gap-1 text-green-500">
-                      <Lock size={10} /> HTTPS Secured
-                    </span>
-                    <span>Version 2.4.0</span>
-                    <span>Status: Operational</span>
-                  </div>
-                </div>
-              </footer>
-
-              {/* Security Banner Simulation */}
-              <div className="bg-blue-600 text-white text-xs text-center py-1 px-4 fixed bottom-0 w-full z-50 md:hidden">
-                מערכת מוגנת - שימוש ב-Cookies לצרכי אבטחה בלבד
-              </div>
-            </div>
-          );
         };
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
